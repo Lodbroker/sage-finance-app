@@ -81,16 +81,16 @@
         .tx-item:last-child { border-bottom: none; }
         .tx-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: center; color: var(--accent-sage); flex-shrink: 0; }
 
-        .fab { position: absolute; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent-sage); color: #000; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); cursor: pointer; z-index: 99; }
-        .nav-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 65px; background: rgba(10, 15, 13, 0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
+        .fab { position: fixed; bottom: 80px; right: max(20px, calc(50% - 220px)); width: 56px; height: 56px; border-radius: 50%; background: var(--accent-sage); color: #000; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); cursor: pointer; z-index: 99; }
+        .nav-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 65px; background: rgba(10, 15, 13, 0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 9px; gap: 4px; cursor: pointer; padding: 6px 4px; flex: 1; }
         .nav-item.active { color: var(--accent-sage); font-weight: bold; }
 
         .app-page { display: none; }
         .app-page.active { display: block; }
 
-        .modal { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: flex-end; }
-        .modal-content { background: var(--bg-grad-2); border-top-left-radius: 24px; border-top-right-radius: 24px; width: 100%; padding: 24px; border: 1px solid var(--card-border); max-height: 90vh; overflow-y: auto; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+        .modal-content { background: var(--bg-grad-2); border-radius: 24px; width: 100%; max-width: 420px; padding: 24px; border: 1px solid var(--card-border); max-height: 85vh; overflow-y: auto; }
         .form-group { margin-bottom: 14px; }
         .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
         .form-input, .form-select { width: 100%; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--card-border); color: #fff; font-size: 15px; outline: none; }
@@ -452,7 +452,7 @@
     <!-- FAB Button -->
     <div class="fab" id="open-modal-btn"><i class="fa-solid fa-plus"></i></div>
 
-    <div id="undo-toast" style="display:none; position:absolute; bottom:150px; left:50%; transform:translateX(-50%); background:var(--bg-grad-2); border:1px solid var(--card-border); padding:10px 16px; border-radius:12px; font-size:12px; z-index:2000; box-shadow:0 8px 24px rgba(0,0,0,0.5); white-space:nowrap;">Операция удалена <span onclick="undoDelete()" style="color:var(--accent-sage); font-weight:bold; cursor:pointer; margin-left:8px;">Отменить</span></div>
+    <div id="undo-toast" style="display:none; position:fixed; bottom:150px; left:50%; transform:translateX(-50%); background:var(--bg-grad-2); border:1px solid var(--card-border); padding:10px 16px; border-radius:12px; font-size:12px; z-index:2000; box-shadow:0 8px 24px rgba(0,0,0,0.5); white-space:nowrap;">Операция удалена <span onclick="undoDelete()" style="color:var(--accent-sage); font-weight:bold; cursor:pointer; margin-left:8px;">Отменить</span></div>
 
     <!-- MODAL: New Transaction -->
     <div class="modal" id="tx-modal">
@@ -742,8 +742,8 @@ const allMonths = ['Январь','Февраль','Март','Апрель','М
 const MONTH_NUM = { 'Январь':0,'Февраль':1,'Март':2,'Апрель':3,'Май':4,'Июнь':5,'Июль':6,'Август':7,'Сентябрь':8,'Октябрь':9,'Ноябрь':10,'Декабрь':11 };
 
 let partnerBanks = [
-    { id: 1, name: 'Карта Пэй', desc: 'Кэшбэк 5% на все покупки', url: 'https://bank.yandex.ru/invite?refid=dHhWx9qrfoF' },
-    { id: 2, name: 'Альфа-Карта', desc: 'Бесплатное обслуживание навсегда + кэшбэк до 100%', url: 'https://alfa.me/3HllTP' }
+    { id: 1, name: 'Т-Банк (Black)', desc: 'Кэшбэк до 30% + 1000 ₽ бонуса', url: 'https://tbank.ru' },
+    { id: 2, name: 'Альфа-Карта', desc: 'Бесплатное обслуживание навсегда', url: 'https://alfabank.ru' }
 ];
 
 let expenseCategories = JSON.parse(localStorage.getItem('sage_exp_cats')) || {
@@ -753,32 +753,15 @@ let expenseCategories = JSON.parse(localStorage.getItem('sage_exp_cats')) || {
 };
 let incomeCategories = JSON.parse(localStorage.getItem('sage_inc_cats')) || ['Зарплата', 'Фриланс', 'Инвестиции', 'Кэшбэк'];
 
-let goals = JSON.parse(localStorage.getItem('sage_goals')) || [
-    { id: 1, name: 'Подушка безопасности', target: 300000, current: 180000 },
-    { id: 2, name: 'Отпуск на море', target: 150000, current: 90000 }
-];
+let goals = JSON.parse(localStorage.getItem('sage_goals')) || [];
 
-let deposits = JSON.parse(localStorage.getItem('sage_deposits')) || [
-    { id: 1, name: 'Накопительный счёт Т-Банк', amount: 500000, rate: 16.0, date: '2026-06-01' },
-    { id: 2, name: 'Вклад Альфа 6 мес', amount: 300000, rate: 17.5, date: '2026-08-15' }
-];
+let deposits = JSON.parse(localStorage.getItem('sage_deposits')) || [];
 
-let debts = JSON.parse(localStorage.getItem('sage_debts')) || [
-    { id: 1, direction: 'owed', person: 'Алексей', amount: 15000, note: 'До зарплаты', repaid: false },
-    { id: 2, direction: 'iowe', person: 'Мама', amount: 8000, note: 'За телефон', repaid: false }
-];
+let debts = JSON.parse(localStorage.getItem('sage_debts')) || [];
 
-let recurring = JSON.parse(localStorage.getItem('sage_rec')) || [
-    { id: 1, name: 'Ипотека', category: 'Жилье и КУ', amount: 20000, day: 5, remind: true },
-    { id: 2, name: 'Spotify', category: 'Подписки', amount: 299, day: 12, remind: false }
-];
+let recurring = JSON.parse(localStorage.getItem('sage_rec')) || [];
 
-let transactions = JSON.parse(localStorage.getItem('sage_txs')) || [
-    { id: 1, type: 'expense', category: 'Еда и продукты', amount: 4500, currency: '₽', amountBase: 4500, month: 'Сентябрь', date: '10 Сен' },
-    { id: 2, type: 'income', category: 'Зарплата', amount: 150000, currency: '₽', amountBase: 150000, month: 'Сентябрь', date: '08 Сен' },
-    { id: 3, type: 'expense', category: 'Жилье и КУ', amount: 20000, currency: '₽', amountBase: 20000, month: 'Сентябрь', date: '05 Сен' },
-    { id: 4, type: 'savings', category: 'Копилка: Подушка безопасности', amount: 30000, currency: '₽', amountBase: 30000, month: 'Сентябрь', date: '02 Сен' }
-];
+let transactions = JSON.parse(localStorage.getItem('sage_txs')) || [];
 
 let chartInstance = null, yearlyChartInstance = null;
 
@@ -948,7 +931,7 @@ function saveRates() {
     rates.USD = Number(document.getElementById('rate-usd').value) || rates.USD;
     rates.EUR = Number(document.getElementById('rate-eur').value) || rates.EUR;
     localStorage.setItem('sage_rates', JSON.stringify(rates));
-    alert(`Курсы сохранены: USD=${rates.USD}, EUR=${rates.EUR}`);
+    uiAlert(`Курсы сохранены: USD=${rates.USD}, EUR=${rates.EUR}`);
     renderUI();
 }
 
@@ -1058,7 +1041,7 @@ function saveNewRecurring() {
     const category = document.getElementById('new-rec-category').value;
     const amount = Number(document.getElementById('new-rec-amount').value);
     const day = Math.min(28, Math.max(1, Number(document.getElementById('new-rec-day').value) || 1));
-    if (!name || !amount) return alert('Заполните название и сумму');
+    if (!name || !amount) return uiAlert('Заполните название и сумму');
     if (!isPro && recurring.length >= 3) { openProModal('🔄 До 3 постоянных платежей в бесплатной версии.'); return; }
     const wantRemind = document.getElementById('new-rec-remind').classList.contains('on');
     if (wantRemind && !isPro) { openProModal('🔔 Push-напоминания о платежах — функция PRO.'); return; }
@@ -1113,7 +1096,7 @@ function saveNewDeposit() {
     const amount = Number(document.getElementById('new-dep-amount').value);
     const rate = Number(document.getElementById('new-dep-rate').value);
     const date = document.getElementById('new-dep-date').value || new Date().toISOString().slice(0, 10);
-    if (!name || !amount || !rate) return alert('Заполните название, сумму и ставку');
+    if (!name || !amount || !rate) return uiAlert('Заполните название, сумму и ставку');
     if (!isPro && deposits.length >= 2) { openProModal('🏛 До 2 вкладов в бесплатной версии.'); return; }
     deposits.push({ id: Date.now(), name, amount, rate, date });
     saveAll(); closeAddDepositModal(); renderUI();
@@ -1175,7 +1158,7 @@ function closeAddDebtModal() { document.getElementById('debt-modal').style.displ
 function saveNewDebt() {
     const person = document.getElementById('new-debt-person').value.trim();
     const amount = Number(document.getElementById('new-debt-amount').value);
-    if (!person || !amount) return alert('Укажите имя и сумму');
+    if (!person || !amount) return uiAlert('Укажите имя и сумму');
     debts.push({
         id: Date.now(),
         direction: document.getElementById('new-debt-direction').value,
@@ -1419,10 +1402,10 @@ document.getElementById('restore-input').addEventListener('change', function (e)
             if (data.currency) { currentCurrency = data.currency; localStorage.setItem('sage_currency', currentCurrency); }
             saveAll();
             localStorage.setItem('sage_rec_applied', '{}');
-            alert('✅ Данные восстановлены из бэкапа');
+            uiAlert('✅ Данные восстановлены из бэкапа');
             location.reload();
         } catch (err) {
-            alert('❌ Не удалось прочитать файл бэкапа');
+            uiAlert('❌ Не удалось прочитать файл бэкапа');
         }
     };
     reader.readAsText(file);
@@ -1450,7 +1433,7 @@ function saveNewCategory() {
     const name = document.getElementById('new-cat-name').value.trim();
     const type = document.getElementById('new-cat-type').value;
     const limit = Number(document.getElementById('new-cat-limit').value) || 0;
-    if (!name) return alert("Введите название категории");
+    if (!name) return uiAlert("Введите название категории");
     if (type === 'expense') {
         expenseCategories[name] = limit;
         localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
@@ -1472,7 +1455,7 @@ function deleteCategory(catName) {
 function saveNewGoal() {
     const name = document.getElementById('new-goal-name').value.trim();
     const target = Number(document.getElementById('new-goal-target').value);
-    if (!name || !target) return alert("Заполните название и сумму цели");
+    if (!name || !target) return uiAlert("Заполните название и сумму цели");
     if (!isPro && goals.length >= 2) { openProModal('🎯 В бесплатной версии — до 2 копилок. В PRO копилок без лимита.'); return; }
     goals.push({ id: Date.now(), name, target, current: 0 });
     saveAll();
@@ -1485,14 +1468,22 @@ function simulateProPurchase() {
     isPro = true;
     localStorage.setItem('sage_is_pro', 'true');
     closeProModal();
-    alert('🎉 PRO-доступ активирован!');
+    uiAlert('🎉 PRO-доступ активирован!');
     renderUI();
 }
-function clearAllData() {
-    if (confirm("Вы уверены, что хотите очистить ВСЕ данные?")) {
-        localStorage.clear();
-        location.reload();
+async function clearAllData() {
+    if (!confirm("Очистить ВСЕ данные? Это сотрёт и облачную копию (включая PRO и триал) для всей семьи.")) return;
+    if (tg && tg.initData) {
+        try {
+            await fetch(API_URL + '/sync', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: tg.initData, version: 0,
+                    state: { transactions: [], goals: [], deposits: [], debts: [], recurring: [] } })
+            });
+        } catch (e) {}
     }
+    localStorage.clear();
+    location.reload();
 }
 
 /* ============================================================
@@ -1691,7 +1682,7 @@ function renderBillsList() {
 /* ---------- Реальная биометрия Telegram ---------- */
 function biometricUnlock() {
     const bio = tg && tg.BiometricManager;
-    if (!bio) { alert('Биометрия недоступна на этом устройстве — введите PIN'); return; }
+    if (!bio) { uiAlert('Биометрия недоступна на этом устройстве — введите PIN'); return; }
     try {
         bio.init(() => {
             bio.requestAccess({ reason: 'Разблокировка Sage Finance' }, (granted) => {
@@ -1704,7 +1695,7 @@ function biometricUnlock() {
                 });
             });
         });
-    } catch (e) { alert('Биометрия недоступна — введите PIN'); }
+    } catch (e) { uiAlert('Биометрия недоступна — введите PIN'); }
 }
 
 /* ---------- Реальные платежи: PRO и донаты (Telegram Stars) ---------- */
@@ -1722,17 +1713,17 @@ async function buyProSubscription(period) {
             tg.openInvoice(d.link, async (st) => {
                 if (st === 'paid' || st === 'cancelled') {
                     await cloudLoad(); renderUI();
-                    if (st === 'paid') alert('🎉 PRO активирован! Спасибо за поддержку.');
+                    if (st === 'paid') uiAlert('🎉 PRO активирован! Спасибо за поддержку.');
                 }
             });
         } else if (d.sent) {
-            alert('Счёт отправлен в чат с ботом — оплатите его там (150 ⭐/мес).');
-        } else { alert(d.error || 'Не удалось создать счёт.'); }
-    } catch (e) { alert('Не удалось создать счёт. Попробуйте позже.'); }
+            uiAlert('Счёт отправлен в чат с ботом — оплатите его там (150 ⭐/мес).');
+        } else { uiAlert(d.error || 'Не удалось создать счёт.'); }
+    } catch (e) { uiAlert('Не удалось создать счёт. Попробуйте позже.'); }
 }
 async function donateStars() {
     triggerHaptic();
-    if (!tg || !tg.initData) { alert('Донаты работают внутри Telegram.'); return; }
+    if (!tg || !tg.initData) { uiAlert('Донаты работают внутри Telegram.'); return; }
     try {
         const r = await fetch(API_URL + '/invoice', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1740,8 +1731,8 @@ async function donateStars() {
         });
         const d = await r.json();
         if (d.link) { tg.openInvoice(d.link, () => {}); }
-        else if (d.sent) { alert('Счёт отправлен в чат с ботом.'); }
-    } catch (e) { alert('Ошибка создания счёта.'); }
+        else if (d.sent) { uiAlert('Счёт отправлен в чат с ботом.'); }
+    } catch (e) { uiAlert('Ошибка создания счёта.'); }
 }
 
 /* ---------- Партнёрские предложения с сервера ---------- */
@@ -1881,7 +1872,7 @@ document.getElementById('save-tx-btn').onclick = () => {
     const type = document.getElementById('tx-type').value;
     const amount = Number(document.getElementById('tx-amount').value);
     const currency = document.getElementById('tx-currency').value;
-    if (!amount || amount <= 0) return alert("Введите корректную сумму");
+    if (!amount || amount <= 0) return uiAlert("Введите корректную сумму");
     const base = convertToBase(amount, currency);
 
     if (type === 'savings') {
@@ -1983,14 +1974,15 @@ async function cloudLoad() {
         const d = await r.json();
         if (d.version) cloudVersion = d.version;
         if (d.state) applyState(d.state);
+        if (d.botUsername) window._botUsername = d.botUsername;
         if (d.inviteCode) {
             document.getElementById('family-status').innerHTML =
-                `Статус: <b style="color:var(--accent-sage)">семья подключена</b> · код приглашения: <b>${d.inviteCode}</b> (сообщите родным)`;
+                `Статус: <b style="color:var(--accent-sage)">вы владелец семьи</b><br>${inviteLinkHTML(d.inviteCode)}`;
         }
     } catch (e) { /* сервер недоступен — работаем локально */ }
 }
 async function familyCreate() {
-    if (!tg || !tg.initData) return alert('Семейный доступ работает только внутри Telegram (Mini App).');
+    if (!tg || !tg.initData) return uiAlert('Семейный доступ работает только внутри Telegram (Mini App).');
     try {
         const r = await fetch(API_URL + '/family', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1999,14 +1991,15 @@ async function familyCreate() {
         const d = await r.json();
         logEvent('family_create');
         if (d.inviteCode) {
-            alert(`Семья создана! Код приглашения: ${d.inviteCode}\n\nСообщите его родным — они введут его в Настройках → «Войти по коду».`);
+            window._botUsername = d.botUsername || window._botUsername;
+            uiAlert('Семья создана! Отправьте родным ссылку-приглашение — по ней они попадут сразу в приложение, и всем подарят PRO на месяц.');
             document.getElementById('family-status').innerHTML =
-                `Статус: <b style="color:var(--accent-sage)">вы владелец семьи</b> · код: <b>${d.inviteCode}</b>`;
+                `Статус: <b style="color:var(--accent-sage)">вы владелец семьи</b><br>${inviteLinkHTML(d.inviteCode)}`;
         }
-    } catch (e) { alert('Не удалось связаться с сервером. Проверьте API_URL в файле index.html'); }
+    } catch (e) { uiAlert('Не удалось связаться с сервером. Проверьте API_URL в файле index.html'); }
 }
 async function familyJoin(code) {
-    if (!tg || !tg.initData) return alert('Работает только внутри Telegram.');
+    if (!tg || !tg.initData) return uiAlert('Работает только внутри Telegram.');
     code = (code || prompt('Введите код приглашения (например K7X2-9PQ4):') || '').trim().toUpperCase();
     if (!code) return;
     try {
@@ -2018,13 +2011,13 @@ async function familyJoin(code) {
         if (d.ok) {
             logEvent('family_join');
             localStorage.removeItem('sage_pending_invite');
-            alert(d.proGranted ? 'Вы присоединились к семье! 🎁 Всем членам семьи подарен PRO на месяц.' : 'Вы присоединились к семье! Данные будут общими.');
+            uiAlert(d.proGranted ? 'Вы присоединились к семье! 🎁 Всем членам семьи подарен PRO на месяц.' : 'Вы присоединились к семье! Данные будут общими.');
             await cloudLoad();
             renderUI();
         } else {
-            alert('Код не найден. Проверьте и попробуйте снова.');
+            uiAlert('Код не найден. Проверьте и попробуйте снова.');
         }
-    } catch (e) { alert('Ошибка связи с сервером.'); }
+    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
 }
 
 /* ---------- Инсайты месяца, недельный лимит, стрики ---------- */
@@ -2214,8 +2207,8 @@ async function shareMonth() {
     }
     try {
         await fetch(API_URL + '/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ initData: tg.initData, image: img }) });
-        alert('Карточка отправлена в чат с ботом — перешлите её друзьям!');
-    } catch (e) { alert('Не удалось отправить.'); }
+        uiAlert('Карточка отправлена в чат с ботом — перешлите её друзьям!');
+    } catch (e) { uiAlert('Не удалось отправить.'); }
 }
 
 /* ---------- Триал 7 дней ---------- */
@@ -2231,9 +2224,23 @@ async function startTrial() {
             closeProModal();
             await cloudLoad(); renderUI();
             logEvent('trial_start');
-            alert('🎁 Пробный PRO активирован на 7 дней!');
-        } else { alert(d.error || 'Триал уже использовался.'); }
-    } catch (e) { alert('Ошибка связи с сервером.'); }
+            uiAlert('🎁 Пробный PRO активирован на 7 дней!');
+        } else { uiAlert(d.error || 'Триал уже использовался.'); }
+    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
+}
+
+/* ---------- Всплывашки: в Telegram — нативные, в браузере — обычный alert ---------- */
+function uiAlert(msg) {
+    if (tg && tg.showAlert) { try { tg.showAlert(String(msg)); return; } catch (e) {} }
+    window.alert(msg);
+}
+
+function inviteLinkHTML(code) {
+    const u = window._botUsername;
+    if (!u) return `код: <b>${code}</b>`;
+    const link = `https://t.me/${u}?start=${code}`;
+    return `<a href="${link}" style="color:var(--accent-light); word-break:break-all;">${link}</a>
+        <span onclick="event.preventDefault(); if(navigator.clipboard) navigator.clipboard.writeText('${link}'); this.innerText='✓ скопировано';" style="cursor:pointer; color:var(--gold); font-size:11px; white-space:nowrap;">📋 скопировать</span>`;
 }
 
 /* ---------- Обратная связь через бота ---------- */
@@ -2241,7 +2248,7 @@ async function sendFeedback() {
     const text = prompt('Опишите идею, ошибку или вопрос — сообщение уйдёт разработчику:');
     if (!text || !text.trim()) return;
     if (!tg || !tg.initData) {
-        alert('Обратная связь работает внутри Telegram. Напишите боту напрямую.');
+        uiAlert('Обратная связь работает внутри Telegram. Напишите боту напрямую.');
         return;
     }
     try {
@@ -2250,9 +2257,9 @@ async function sendFeedback() {
             body: JSON.stringify({ initData: tg.initData, text: text.trim().slice(0, 1000) })
         });
         const d = await r.json();
-        if (d.ok) { logEvent('feedback'); alert('✅ Спасибо! Сообщение отправлено разработчику.'); }
-        else alert('Не удалось отправить. Попробуйте позже.');
-    } catch (e) { alert('Ошибка связи с сервером.'); }
+        if (d.ok) { logEvent('feedback'); uiAlert('✅ Спасибо! Сообщение отправлено разработчику.'); }
+        else uiAlert('Не удалось отправить. Попробуйте позже.');
+    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
 }
 
 /* ---------- Аналитика событий ---------- */
