@@ -671,14 +671,13 @@
                 <h3 style="color: var(--gold);"><i class="fa-solid fa-crown"></i> Подписка Sage PRO</h3>
                 <i class="fa-solid fa-xmark" onclick="closeProModal()" style="font-size: 20px; cursor: pointer;"></i>
             </div>
-            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Разблокируйте весь потенциал приложения:</div>
-            <div class="pro-benefit-item"><i class="fa-solid fa-file-import"></i> <span><b>Импорт выписок</b> (CSV из любого банка)</span></div>
-            <div class="pro-benefit-item"><i class="fa-solid fa-bell"></i> <span><b>Push-напоминания</b> о платежах через бота</span></div>
-            <div class="pro-benefit-item"><i class="fa-solid fa-file-export"></i> <span><b>Экспорт отчётов</b> в CSV</span></div>
-            <div class="pro-benefit-item"><i class="fa-solid fa-shield-halved"></i> <span><b>PIN-код и биометрия</b> при входе</span></div>
-            <div class="pro-benefit-item"><i class="fa-solid fa-chart-column"></i> <span><b>Годовая аналитика</b> и тренды</span></div>
-            <div class="pro-benefit-item"><i class="fa-solid fa-palette"></i> <span><b>Премиум темы</b> (Неон, Океан)</span></div>
-            <div class="pro-benefit-item"><i class="fa-solid fa-users"></i> <span><b>Семейный доступ</b> с синхронизацией</span></div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Разблокируйте весь потенциал:</div>
+            <div class="pro-benefit-item" style="margin-bottom:7px; font-size:12px;"><i class="fa-solid fa-file-import" style="font-size:13px;"></i> <span><b>Импорт выписок</b> (CSV)</span></div>
+            <div class="pro-benefit-item" style="margin-bottom:7px; font-size:12px;"><i class="fa-solid fa-bell" style="font-size:13px;"></i> <span><b>Push-напоминания</b> о платежах</span></div>
+            <div class="pro-benefit-item" style="margin-bottom:7px; font-size:12px;"><i class="fa-solid fa-file-export" style="font-size:13px;"></i> <span><b>Экспорт отчётов</b> в CSV</span></div>
+            <div class="pro-benefit-item" style="margin-bottom:7px; font-size:12px;"><i class="fa-solid fa-shield-halved" style="font-size:13px;"></i> <span><b>PIN и биометрия</b> при входе</span></div>
+            <div class="pro-benefit-item" style="margin-bottom:7px; font-size:12px;"><i class="fa-solid fa-chart-column" style="font-size:13px;"></i> <span><b>Годовая аналитика</b></span></div>
+            <div class="pro-benefit-item" style="margin-bottom:7px; font-size:12px;"><i class="fa-solid fa-palette" style="font-size:13px;"></i> <span><b>Премиум темы</b></span></div>
             <div style="margin-top: 20px;">
                 <div id="pro-reason" style="font-size: 12px; color: var(--gold); margin-bottom: 12px; display: none;"></div>
                 <button class="btn-submit" style="background: var(--gold); margin-bottom: 8px;" onclick="buyProSubscription('month')">PRO — 150 ⭐ / месяц</button>
@@ -1714,6 +1713,8 @@ async function buyProSubscription(period) {
                 if (st === 'paid' || st === 'cancelled') {
                     await cloudLoad(); renderUI();
                     if (st === 'paid') uiAlert('🎉 PRO активирован! Спасибо за поддержку.');
+                } else if (st === 'failed') {
+                    uiAlert('⚠️ Платёж не прошёл. Попробуйте позже или выберите другой способ пополнения Stars.');
                 }
             });
         } else if (d.sent) {
@@ -1910,7 +1911,6 @@ document.getElementById('currency-select').onchange = (e) => {
 
 /* ============================================================
    ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ (Cloudflare Worker + Supabase)
-   ВАЖНО: после деплоя замените URL ниже на ваш (шаг 3 инструкции)
    ============================================================ */
 const API_URL = 'https://sage-api.ivan-xls.workers.dev';
 let cloudSaveTimer = null, cloudVersion = 0;
