@@ -446,6 +446,13 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         </div>
 
         <div class="glass-card">
+            <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">Быстрая запись с экрана</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Трата голосом или виджетом, без открытия приложения. Полная инструкция в боте: команда /setup</div>
+            <div id="quick-token-box" style="display:none; font-size:12px; margin-bottom:8px; word-break:break-all;"></div>
+            <button class="btn-small" onclick="quickTokenShow()">Показать мой ключ</button>
+        </div>
+
+        <div class="glass-card">
             <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">Семейный доступ</div>
             <div id="family-status" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Статус: локально (облако не подключено)</div>
             <div style="display:flex; gap:8px;">
@@ -2226,6 +2233,25 @@ async function startTrial() {
             logEvent('trial_start');
             uiAlert('🎁 Пробный PRO активирован на 7 дней!');
         } else { uiAlert(d.error || 'Триал уже использовался.'); }
+    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
+}
+
+/* ---------- Ключ быстрой записи ---------- */
+async function quickTokenShow() {
+    if (!platform.inTelegram) return uiAlert('Работает внутри Telegram.');
+    try {
+        const r = await fetch(API_URL + '/token', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: platform.initData })
+        });
+        const d = await r.json();
+        if (d.token) {
+            const box = document.getElementById('quick-token-box');
+            box.style.display = 'block';
+            box.innerHTML = `Ключ: <b>${d.token}</b> <span onclick="if(navigator.clipboard)navigator.clipboard.writeText('${d.token}');this.innerText='✓ скопировано'" style="cursor:pointer;color:var(--gold);font-size:11px;">📋</span><br><span style="color:var(--text-muted)">Вставьте его в команду по инструкции из бота (/setup). Храните как пароль.</span>`;
+        } else {
+            uiAlert('Не удалось получить ключ.');
+        }
     } catch (e) { uiAlert('Ошибка связи с сервером.'); }
 }
 
