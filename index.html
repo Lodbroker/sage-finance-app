@@ -103,8 +103,8 @@
         .kpi-value.savings { color: var(--gold); }
 
         .carousel-dots { display: flex; gap: 6px; align-items: center; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; transition: all 0.3s; }
-        .dot.active { background: var(--accent-sage); width: 18px; border-radius: 4px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); opacity: 0.35; cursor: pointer; transition: all 0.3s; }
+        .dot.active { background: var(--accent-sage); opacity: 1; width: 18px; border-radius: 4px; }
 
         .chart-container { position: relative; height: 175px; width: 100%; }
         .tx-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
@@ -792,7 +792,7 @@ let recurring = JSON.parse(localStorage.getItem('sage_rec')) || [];
 
 let transactions = JSON.parse(localStorage.getItem('sage_txs')) || [];
 
-let chartInstance = null, yearlyChartInstance = null;
+let chartInstance = null, yearlyChartInstance = null, currentSlide = 0;
 
 /* ---------- Хелперы ---------- */
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 }); }
@@ -1477,6 +1477,7 @@ function populateGoalDropdown() {
    ============================================================ */
 function setAnalyticsSlide(idx) {
     triggerHaptic();
+    currentSlide = idx;
     document.getElementById('slide-0').style.display = idx === 0 ? 'block' : 'none';
     document.getElementById('slide-1').style.display = idx === 1 ? 'block' : 'none';
     document.getElementById('dot-0').className = `dot ${idx === 0 ? 'active' : ''}`;
@@ -2301,6 +2302,21 @@ async function handleInviteParam() {
 
     // PIN-экран при входе
     if (pinCode) showPinScreen('Введите PIN-код');
+
+    // Свайп по карточке аналитики (мобильный жест вместо точек)
+    (function () {
+        const card = document.getElementById('analytics-carousel-card');
+        if (!card) return;
+        let sx = 0, sy = 0;
+        card.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+        card.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - sx;
+            const dy = e.changedTouches[0].clientY - sy;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                setAnalyticsSlide(currentSlide === 0 ? 1 : 0);
+            }
+        }, { passive: true });
+    })();
 
     logEvent('app_open');
 })();
