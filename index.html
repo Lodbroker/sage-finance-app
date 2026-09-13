@@ -110,6 +110,7 @@
         .chart-container { position: relative; height: 175px; width: 100%; }
         .tx-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .tx-item:last-child { border-bottom: none; }
+        #tx-list { margin-bottom: 60px; }
         .tx-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--soft-bg); display: flex; align-items: center; justify-content: center; color: var(--accent-sage); flex-shrink: 0; }
 
         .fab { position: fixed; bottom: 80px; right: max(20px, calc(50% - 220px)); width: 56px; height: 56px; border-radius: 50%; background: var(--accent-sage); color: #000; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); cursor: pointer; z-index: 99; }
@@ -1622,6 +1623,29 @@ function renderUI() {
 function chartMuted() {
     return (getComputedStyle(document.body).getPropertyValue('--text-muted') || '').trim() || '#8E9F96';
 }
+/* Итог трат месяца в центре кольца */
+const centerTotalPlugin = {
+    id: 'centerTotal',
+    afterDraw(chart) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        const hasData = chart.data.labels.length && chart.data.labels[0] !== 'Нет данных';
+        const total = hasData ? chart.data.datasets[0].data.reduce((a, b) => a + b, 0) : 0;
+        const x = (chartArea.left + chartArea.right) / 2;
+        const y = (chartArea.top + chartArea.bottom) / 2;
+        const mainColor = (getComputedStyle(document.body).getPropertyValue('--text-main') || '').trim() || '#F4F7F5';
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '700 16px -apple-system, sans-serif';
+        ctx.fillStyle = mainColor;
+        ctx.fillText(privacyOn ? '••••' : fmt(total), x, y - 8);
+        ctx.font = '600 10px -apple-system, sans-serif';
+        ctx.fillStyle = chartMuted();
+        ctx.fillText(privacyOn ? '' : 'расходы ' + currentCurrency, x, y + 11);
+        ctx.restore();
+    }
+};
 
 /* ---------- Иконки категорий ---------- */
 const CAT_ICONS = [
@@ -1914,7 +1938,7 @@ function renderChart(catTotals) {
             labels: Object.keys(catTotals).length ? Object.keys(catTotals) : ['Нет данных'],
             datasets: [{ data: Object.values(catTotals).length ? Object.values(catTotals) : [1], backgroundColor: ['#52B788', '#74C69D', '#FFD166', '#EF476F', '#118AB2', '#9B5DE5'], borderWidth: 0 }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }, plugins: [centerTotalPlugin]
     });
 }
 
