@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://*.workers.dev https://*.supabase.co https://api.telegram.org; img-src 'self' data: https:; object-src 'none'; base-uri 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' https://*.workers.dev https://*.supabase.co https://api.telegram.org; img-src 'self' data: https:; object-src 'none'; base-uri 'self'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sage Finance TMA v7 PRO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -422,14 +422,33 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         </div>
 
         <div class="glass-card">
-            <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">Защита и приватность</div>
+            <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;"><i class="fa-solid fa-shield-halved" style="color:var(--accent-sage);"></i> Безопасность</div>
+
             <div class="toggle-row">
                 <div><div style="font-size: 13px; font-weight: 600;">PIN-код (4 цифры) <span class="badge-pro">PRO</span></div><div style="font-size: 11px; color: var(--text-muted);" id="pin-status">Не установлен</div></div>
                 <div class="toggle" id="pin-toggle" onclick="togglePin()"></div>
             </div>
             <div class="toggle-row">
+                <div><div style="font-size: 13px; font-weight: 600;">Биометрия</div><div style="font-size: 11px; color: var(--text-muted);" id="bio-status">Появится на экране PIN, если включён вход по отпечатку или лицу</div></div>
+                <div class="toggle" style="visibility:hidden;"></div>
+            </div>
+            <div class="toggle-row">
                 <div><div style="font-size: 13px; font-weight: 600;">Режим «Приватность»</div><div style="font-size: 11px; color: var(--text-muted);">Скрывает суммы (**** ₽)</div></div>
                 <div class="toggle" id="privacy-toggle-row" onclick="togglePrivacy()"></div>
+            </div>
+
+            <div style="border-top:1px solid rgba(255,255,255,0.08); margin-top:6px; padding-top:10px;">
+                <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Ключ быстрой записи</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Для голосовых команд и виджетов. Кто знает ключ, тот может добавлять траты. Храните как пароль.</div>
+                <div id="quick-token-box" style="display:none; font-size:12px; margin-bottom:8px; word-break:break-all;"></div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-small" onclick="quickTokenShow()">Показать ключ</button>
+                    <button class="btn-small btn-outline" onclick="quickTokenRevoke()">Перевыпустить</button>
+                </div>
+            </div>
+
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 12px; line-height: 1.5;">
+                Что под капотом: вход по подписи Telegram (без паролей), облако на защищённом сервере, права PRO решает только сервер, PIN это замок экрана, а не шифрование. Данные не передаются третьим лицам.
             </div>
         </div>
 
@@ -449,8 +468,7 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         <div class="glass-card">
             <div style="font-size: 15px; font-weight: bold; margin-bottom: 4px;">Быстрая запись с экрана</div>
             <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Трата голосом или виджетом, без открытия приложения. Полная инструкция в боте: команда /setup</div>
-            <div id="quick-token-box" style="display:none; font-size:12px; margin-bottom:8px; word-break:break-all;"></div>
-            <button class="btn-small" onclick="quickTokenShow()">Показать мой ключ</button>
+            <div style="font-size: 11px; color: var(--text-muted);">Ключ выдаётся в разделе «Безопасность» ниже.</div>
         </div>
 
         <div class="glass-card">
@@ -2247,6 +2265,24 @@ async function quickTokenShow() {
             uiAlert('Не удалось получить ключ.');
         }
     } catch (e) { uiAlert('Ошибка связи с сервером.'); }
+}
+
+async function quickTokenRevoke() {
+    uiConfirm('Перевыпустить ключ? Команды на устройствах со старым ключом перестанут работать.', async () => {
+        if (!platform.inTelegram) return uiAlert('Работает внутри Telegram.');
+        try {
+            const r = await fetch(API_URL + '/revoke', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: platform.initData })
+            });
+            const d = await r.json();
+            if (d.token) {
+                const box = document.getElementById('quick-token-box');
+                box.style.display = 'block';
+                box.innerHTML = `Новый ключ: <b>${d.token}</b> <span onclick="if(navigator.clipboard)navigator.clipboard.writeText('${d.token}');this.innerText='✓ скопировано'" style="cursor:pointer;color:var(--gold);font-size:11px;">📋</span><br><span style="color:var(--text-muted)">Обновите его в командах на устройствах.</span>`;
+            } else uiAlert('Не удалось перевыпустить ключ.');
+        } catch (e) { uiAlert('Ошибка связи с сервером.'); }
+    });
 }
 
 /* ---------- Всплывашки: в Telegram — нативные, в браузере — обычный alert ---------- */
