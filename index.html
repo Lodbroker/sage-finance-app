@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sage Finance TMA v7 PRO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -783,6 +783,7 @@ let chartInstance = null, yearlyChartInstance = null;
 
 /* ---------- Хелперы ---------- */
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 }); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function convertToBase(amount, currency) {
     if (currency === currentCurrency) return amount;
     if (currency === '$') return amount * (rates.USD || 1);
@@ -873,6 +874,17 @@ document.getElementById('privacy-toggle').onclick = togglePrivacy;
 let pinBuffer = '', pinMode = 'check'; // check | set | confirm
 let pinTemp = '';
 
+async function hashPin(p) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('sage-pin:' + p));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+(function migratePin() {
+    const old = localStorage.getItem('sage_pin');
+    if (old && /^\d{4}$/.test(old)) {
+        hashPin(old).then(h => { localStorage.setItem('sage_pin', h); pinCode = h; });
+    }
+})();
+
 function togglePin() {
     if (!isPro) { openProModal(); return; }
     if (pinCode) {
@@ -909,9 +921,9 @@ function pinPress(k) {
     pinBuffer += k; updatePinDots();
     if (pinBuffer.length === 4) setTimeout(handlePinComplete, 150);
 }
-function handlePinComplete() {
+async function handlePinComplete() {
     if (pinMode === 'check') {
-        if (pinBuffer === pinCode) { hidePinScreen(); }
+        if (pinCode && /^\d{4}$/.test(pinBuffer) && (await hashPin(pinBuffer)) === pinCode) { hidePinScreen(); }
         else {
             const dots = document.getElementById('pin-dots');
             dots.classList.add('pin-shake');
@@ -923,7 +935,7 @@ function handlePinComplete() {
         updatePinDots();
     } else if (pinMode === 'confirm') {
         if (pinBuffer === pinTemp) {
-            pinCode = pinBuffer; localStorage.setItem('sage_pin', pinCode);
+            pinCode = await hashPin(pinBuffer); localStorage.setItem('sage_pin', pinCode);
             hidePinScreen(); updatePinUI();
         } else {
             const dots = document.getElementById('pin-dots');
@@ -1013,8 +1025,8 @@ function renderRecurringList() {
             <div style="display:flex; align-items:center; gap:10px;">
                 <div class="tx-icon"><i class="fa-solid fa-rotate"></i></div>
                 <div>
-                    <div style="font-weight:bold; font-size:13px;">${r.name} ${r.remind ? '<i class="fa-solid fa-bell" style="font-size:10px;color:var(--gold);"></i>' : ''}</div>
-                    <div style="font-size:10px; color:var(--text-muted);">каждый ${r.day}-е · ${r.category}</div>
+                    <div style="font-weight:bold; font-size:13px;">${esc(r.name)} ${r.remind ? '<i class="fa-solid fa-bell" style="font-size:10px;color:var(--gold);"></i>' : ''}</div>
+                    <div style="font-size:10px; color:var(--text-muted);">каждый ${r.day}-е · ${esc(r.category)}</div>
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -1146,7 +1158,7 @@ function renderDepositsList() {
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div>
-                    <div style="font-weight:bold; font-size:13px;"><i class="fa-solid fa-vault" style="color:var(--gold);"></i> ${d.name}</div>
+                    <div style="font-weight:bold; font-size:13px;"><i class="fa-solid fa-vault" style="color:var(--gold);"></i> ${esc(d.name)}</div>
                     <div style="font-size:11px; color:var(--text-muted);">открыт ${start.toLocaleDateString('ru-RU')} · ставка <b style="color:var(--gold);">${d.rate}%</b></div>
                 </div>
                 <div style="text-align:right;">
@@ -1213,7 +1225,7 @@ function renderDebtsList() {
                     <i class="fa-solid ${d.direction === 'owed' ? 'fa-hand-holding-dollar' : 'fa-money-bill-wave'}"></i>
                 </div>
                 <div>
-                    <div style="font-weight:bold; font-size:13px;">${d.person}</div>
+                    <div style="font-weight:bold; font-size:13px;">${esc(d.person)}</div>
                     <div style="font-size:10px; color:var(--text-muted);">${d.direction === 'owed' ? 'должен мне' : 'я должен'}${d.note ? ' · ' + d.note : ''}</div>
                 </div>
             </div>
@@ -1497,8 +1509,8 @@ function renderUI() {
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div class="tx-icon"><i class="fa-solid ${catIcon(tx.category, tx.type)}"></i></div>
                 <div>
-                    <div style="font-weight: bold; font-size: 13px;">${tx.category}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${tx.date}</div>
+                    <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}</div>
                 </div>
             </div>
             <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : '#fff')};">
@@ -1606,7 +1618,7 @@ function renderPartnerPlashka() {
         plashkaIdx++;
         box.innerHTML = `<div style="margin:12px 16px 4px; padding:10px 14px; border-radius:14px; background:linear-gradient(135deg, rgba(82,183,136,0.15), rgba(255,209,102,0.08)); border:1px solid var(--card-border); display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="window.open('${b.url}','_blank')">
             <i class="fa-solid fa-gift" style="color:var(--gold); font-size:16px;"></i>
-            <div style="flex:1;"><div style="font-size:12px; font-weight:700;">${b.name}</div><div style="font-size:10px; color:var(--text-muted);">${b.desc}</div></div>
+            <div style="flex:1;"><div style="font-size:12px; font-weight:700;">${esc(b.name)}</div><div style="font-size:10px; color:var(--text-muted);">${esc(b.desc)}</div></div>
             <span style="font-size:10px; color:var(--text-muted);">Реклама</span>
         </div>`;
     };
@@ -1627,7 +1639,7 @@ function renderBillsList() {
     withRemind.forEach(r => {
         const row = document.createElement('div');
         row.className = 'tx-item';
-        row.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-bell" style="color:var(--gold);font-size:12px;"></i><span style="font-size:12px;">${r.name}</span></div><span class="hideable" style="font-size:12px;color:var(--text-muted);">каждое ${r.day}-е · ${fmt(r.amount)} ${currentCurrency}</span>`;
+        row.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-bell" style="color:var(--gold);font-size:12px;"></i><span style="font-size:12px;">${esc(r.name)}</span></div><span class="hideable" style="font-size:12px;color:var(--text-muted);">каждое ${r.day}-е · ${fmt(r.amount)} ${currentCurrency}</span>`;
         c.appendChild(row);
     });
 }
@@ -1756,7 +1768,7 @@ function renderGoalsList() {
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <div>
-                    <div style="font-weight:bold; font-size:14px;">${g.name}</div>
+                    <div style="font-weight:bold; font-size:14px;">${esc(g.name)}</div>
                     <div class="hideable" style="font-size:12px; color:var(--text-muted);">${fmt(g.current)} / ${fmt(g.target)} ${currentCurrency}</div>
                 </div>
                 <span class="tag ${pct >= 100 ? 'green' : 'gold'}">${pct}%</span>
@@ -1776,8 +1788,8 @@ function renderPartnerBanks() {
         card.className = 'partner-card';
         card.innerHTML = `
             <div>
-                <div style="font-weight: bold; font-size: 13px;">${bank.name}</div>
-                <div style="font-size: 11px; color: var(--text-muted);">${bank.desc}</div>
+                <div style="font-weight: bold; font-size: 13px;">${esc(bank.name)}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">${esc(bank.desc)}</div>
             </div>
             <button class="btn-small" onclick="window.open('${bank.url}', '_blank')">Забрать</button>`;
         container.appendChild(card);
@@ -1915,7 +1927,7 @@ async function cloudSave() {
                 }
             }
         } catch (e) { /* офлайн — данные останутся в localStorage */ }
-    }, 600);
+    }, 1500);
 }
 async function cloudLoad() {
     if (!tg || !tg.initData) return;
@@ -2052,7 +2064,7 @@ function renderInsights() {
         const d = cur[c] - (prev[c] || 0);
         if (d > topD) { topD = d; top = c; }
     });
-    if (top) lines.push(`📈 «${top}»: +${fmt(topD)} ${currentCurrency} к прошлому месяцу`);
+    if (top) lines.push(`📈 «${esc(top)}»: +${fmt(topD)} ${currentCurrency} к прошлому месяцу`);
     const subs = cur['Подписки'] || 0;
     if (subs > 0 && inc > 0) lines.push(`📺 Подписки съели ${fmt(subs)} ${currentCurrency} (${Math.round(subs / inc * 100)}% дохода)`);
     if (inc > 0) {
