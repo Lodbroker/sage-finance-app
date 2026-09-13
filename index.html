@@ -103,7 +103,7 @@
         .kpi-value.savings { color: var(--gold); }
 
         .carousel-dots { display: flex; gap: 6px; align-items: center; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); opacity: 0.35; cursor: pointer; transition: all 0.3s; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); opacity: 0.55; cursor: pointer; transition: all 0.3s; }
         .dot.active { background: var(--accent-sage); opacity: 1; width: 18px; border-radius: 4px; }
 
         .chart-container { position: relative; height: 175px; width: 100%; }
@@ -248,7 +248,7 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         <div id="onboarding-slot"></div>
         <div class="glass-card" id="insights-card"></div>
 
-        <div class="glass-card" id="analytics-carousel-card">
+        <div class="glass-card" id="analytics-carousel-card" style="touch-action: pan-y;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                 <div style="font-size: 14px; font-weight: bold;" id="carousel-title">Структура трат (Месяц)</div>
                 <div class="carousel-dots">
