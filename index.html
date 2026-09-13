@@ -901,10 +901,10 @@ async function hashPin(p) {
 function togglePin() {
     if (!isPro) { openProModal(); return; }
     if (pinCode) {
-        if (confirm('Отключить PIN-код?')) {
+        uiConfirm('Отключить PIN-код?', () => {
             pinCode = null; localStorage.removeItem('sage_pin');
             updatePinUI();
-        }
+        });
     } else {
         pinMode = 'set'; pinBuffer = '';
         showPinScreen('Придумайте PIN-код');
@@ -1115,10 +1115,10 @@ function saveEditRecurring() {
     saveAll(); closeEditRecModal(); renderUI();
 }
 function deleteRecurring() {
-    if (confirm('Удалить этот постоянный платёж?')) {
+    uiConfirm('Удалить этот постоянный платёж?', () => {
         recurring = recurring.filter(x => x.id !== editingRecId);
         saveAll(); closeEditRecModal(); renderUI();
-    }
+    });
 }
 
 /* ============================================================
@@ -1152,10 +1152,10 @@ function editDepositField(id, field) {
     saveAll(); renderUI();
 }
 function deleteDeposit(id) {
-    if (confirm('Закрыть вклад и удалить его из списка?')) {
+    uiConfirm('Закрыть вклад и удалить его из списка?', () => {
         deposits = deposits.filter(x => x.id !== id);
         saveAll(); renderUI();
-    }
+    });
 }
 function renderDepositsList() {
     const container = document.getElementById('deposits-list');
@@ -1218,10 +1218,10 @@ function toggleDebtRepaid(id) {
     if (d) { d.repaid = !d.repaid; saveAll(); renderUI(); }
 }
 function deleteDebt(id) {
-    if (confirm('Удалить запись о долге?')) {
+    uiConfirm('Удалить запись о долге?', () => {
         debts = debts.filter(x => x.id !== id);
         saveAll(); renderUI();
-    }
+    });
 }
 function renderDebtsList() {
     const container = document.getElementById('debts-list');
@@ -1338,7 +1338,7 @@ document.getElementById('restore-input').addEventListener('change', function (e)
         try {
             const data = JSON.parse(ev.target.result);
             if (!data.transactions) throw new Error('bad file');
-            if (!confirm(`Восстановить бэкап от ${data.exportedAt ? new Date(data.exportedAt).toLocaleString('ru-RU') : 'неизвестной даты'}? Текущие данные будут заменены.`)) return;
+            if (!window.confirm(`Восстановить бэкап от ${data.exportedAt ? new Date(data.exportedAt).toLocaleString('ru-RU') : 'неизвестной даты'}? Текущие данные будут заменены.`)) return;
             transactions = data.transactions || [];
             goals = data.goals || [];
             deposits = data.deposits || [];
@@ -1394,11 +1394,11 @@ function saveNewCategory() {
     closeAddCatModal(); renderUI();
 }
 function deleteCategory(catName) {
-    if (confirm(`Удалить категорию "${catName}"?`)) {
+    uiConfirm(`Удалить категорию "${catName}"?`, () => {
         delete expenseCategories[catName];
         saveAll();
         renderUI();
-    }
+    });
 }
 function saveNewGoal() {
     const name = document.getElementById('new-goal-name').value.trim();
@@ -1420,18 +1420,19 @@ function simulateProPurchase() {
     renderUI();
 }
 async function clearAllData() {
-    if (!confirm("Очистить ВСЕ данные? Это сотрёт и облачную копию (включая PRO и триал) для всей семьи.")) return;
-    if (platform.inTelegram) {
-        try {
-            await fetch(API_URL + '/sync', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: platform.initData, version: 0,
-                    state: { transactions: [], goals: [], deposits: [], debts: [], recurring: [] } })
-            });
-        } catch (e) {}
-    }
-    localStorage.clear();
-    location.reload();
+    uiConfirm('Очистить ВСЕ данные? Это сотрёт и облачную копию (включая PRO и триал) для всей семьи.', async () => {
+        if (platform.inTelegram) {
+            try {
+                await fetch(API_URL + '/sync', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData: platform.initData, version: 0,
+                        state: { transactions: [], goals: [], deposits: [], debts: [], recurring: [] } })
+                });
+            } catch (e) {}
+        }
+        localStorage.clear();
+        location.reload();
+    });
 }
 
 /* ============================================================
@@ -1601,7 +1602,10 @@ function catIcon(cat, type) {
 let lastDeletedTx = null, undoTimer = null;
 function askDeleteTx(id) {
     triggerHaptic();
-    if (!confirm('Удалить эту операцию?')) return;
+    if (tg && tg.showConfirm) { try { tg.showConfirm('Удалить эту операцию?', ok => { if (ok) doDeleteTx(id); }); return; } catch (e) {} }
+    if (window.confirm('Удалить эту операцию?')) doDeleteTx(id);
+}
+function doDeleteTx(id) {
     const idx = transactions.findIndex(t => t.id === id);
     if (idx < 0) return;
     lastDeletedTx = transactions[idx];
@@ -1785,7 +1789,7 @@ function renderGoalsList() {
                     <div style="font-weight:bold; font-size:14px;">${esc(g.name)}</div>
                     <div class="hideable" style="font-size:12px; color:var(--text-muted);">${fmt(g.current)} / ${fmt(g.target)} ${currentCurrency}</div>
                 </div>
-                <span class="tag ${pct >= 100 ? 'green' : 'gold'}">${pct}%</span>
+                <span class="tag ${pct >= 100 ? 'green' : 'gold'}">${pct}%</span> <i class="fa-solid fa-trash" style="font-size:11px;color:var(--danger);cursor:pointer;" onclick="deleteGoal(${g.id})" title="Удалить цель"></i>
             </div>
             <div style="height:10px; background:rgba(255,255,255,0.08); border-radius:5px; overflow:hidden;">
                 <div style="width:${pct}%; height:100%; background:var(--gold); transition: width 0.3s;"></div>
@@ -1938,9 +1942,9 @@ async function cloudSave() {
             const d = await r.json().catch(() => null);
             if (d && d.version) cloudVersion = d.version;
             if (d && d.conflict) {
-                if (confirm('Данные изменил другой член семьи. Загрузить актуальную версию? Ваши последние локальные правки будут перезаписаны.')) {
+                uiConfirm('Данные изменил другой член семьи. Загрузить актуальную версию? Ваши последние локальные правки будут перезаписаны.', async () => {
                     await cloudLoad(); renderUI();
-                }
+                });
             }
         } catch (e) { /* офлайн — данные останутся в localStorage */ }
     }, 1500);
@@ -2107,6 +2111,13 @@ function cycleTag(cat) {
     renderUI();
 }
 
+function deleteGoal(id) {
+    uiConfirm('Удалить копилку? Накопленные деньги никуда не пропадают — вы просто перестаёте вести эту цель.', () => {
+        goals = goals.filter(g => g.id !== id);
+        saveAll(); renderUI();
+    });
+}
+
 /* ---------- Режим поездки и недельный лимит ---------- */
 function toggleTripMode() {
     tripMode = !tripMode;
@@ -2146,7 +2157,7 @@ function applyAutoSavings(incomeBase) {
 function renderOnboarding() {
     const slot = document.getElementById('onboarding-slot');
     if (!slot) return;
-    if (localStorage.getItem('sage_onboarded') || transactions.length > 4) { slot.innerHTML = ''; return; }
+    if (localStorage.getItem('sage_onboarded') || transactions.length > 0) { slot.innerHTML = ''; return; }
     slot.innerHTML = `<div class="glass-card" style="border-color:rgba(82,183,136,0.4);">
         <div style="font-size:14px; font-weight:bold; margin-bottom:8px;">👋 Начнём за 3 шага</div>
         <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">1️⃣ Запишите доход &nbsp;·&nbsp; 2️⃣ Добавьте постоянные платежи &nbsp;·&nbsp; 3️⃣ Создайте копилку</div>
@@ -2221,6 +2232,12 @@ async function startTrial() {
 /* ---------- Всплывашки: в Telegram — нативные, в браузере — обычный alert ---------- */
 function uiAlert(msg) {
     platform.showAlert(msg);
+}
+
+/* Подтверждения: в Telegram — нативное окно, иначе браузерный confirm */
+function uiConfirm(msg, onOk) {
+    if (tg && tg.showConfirm) { try { tg.showConfirm(String(msg), ok => { if (ok) onOk(); }); return; } catch (e) {} }
+    if (window.confirm(msg)) onOk();
 }
 
 function inviteLinkHTML(code) {
