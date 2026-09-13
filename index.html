@@ -536,6 +536,33 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         </div>
     </div>
 
+    <!-- MODAL: Edit Transaction -->
+    <div class="modal" id="tx-edit-modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                <h3>Изменить операцию</h3>
+                <i class="fa-solid fa-xmark" onclick="closeEditTx()" style="font-size: 20px; cursor: pointer;"></i>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Категория</label>
+                <select class="form-select" id="edit-tx-category"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Сумма</label>
+                <input type="number" class="form-input" id="edit-tx-amount" inputmode="decimal">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Валюта</label>
+                <select class="form-select" id="edit-tx-currency">
+                    <option value="₽">₽ Рубль</option>
+                    <option value="$">$ Доллар</option>
+                    <option value="€">€ Евро</option>
+                </select>
+            </div>
+            <button class="btn-submit" onclick="saveEditTx()">Сохранить</button>
+        </div>
+    </div>
+
     <!-- MODAL: New Category -->
     <div class="modal" id="cat-modal">
         <div class="modal-content">
@@ -1553,11 +1580,15 @@ function renderUI() {
             </div>`;
         txListEl.appendChild(item);
 
-        let pressTimer = null;
-        const startPress = () => { pressTimer = setTimeout(() => { pressTimer = null; askDeleteTx(tx.id); }, 600); };
+        let pressTimer = null, longPressFired = false;
+        const startPress = () => {
+            longPressFired = false;
+            pressTimer = setTimeout(() => { longPressFired = true; pressTimer = null; askDeleteTx(tx.id); }, 600);
+        };
         item.addEventListener('touchstart', startPress);
         item.addEventListener('touchend', () => clearTimeout(pressTimer));
         item.addEventListener('touchmove', () => clearTimeout(pressTimer));
+        item.addEventListener('click', () => { if (longPressFired) { longPressFired = false; return; } openEditTx(tx.id); });
     });
 
     document.getElementById('total-income').innerText = `${fmt(income)} ${currentCurrency}`;
@@ -1625,6 +1656,46 @@ function askDeleteTx(id) {
     if (tg && tg.showConfirm) { try { tg.showConfirm('Удалить эту операцию?', ok => { if (ok) doDeleteTx(id); }); return; } catch (e) {} }
     if (window.confirm('Удалить эту операцию?')) doDeleteTx(id);
 }
+let editingTxId = null;
+function openEditTx(id) {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+    triggerHaptic();
+    editingTxId = id;
+    const catSel = document.getElementById('edit-tx-category');
+    catSel.innerHTML = '';
+    const addOpt = (v, sel) => { const o = document.createElement('option'); o.value = v; o.innerText = v; if (v === sel) o.selected = true; catSel.appendChild(o); };
+    if (tx.type === 'expense') {
+        Object.keys(expenseCategories).forEach(c => addOpt(c, tx.category));
+        catSel.disabled = false;
+    } else if (tx.type === 'income') {
+        incomeCategories.forEach(c => addOpt(c, tx.category));
+        catSel.disabled = false;
+    } else {
+        addOpt(tx.category, tx.category);
+        catSel.disabled = true;
+    }
+    document.getElementById('edit-tx-amount').value = tx.amount;
+    document.getElementById('edit-tx-currency').value = tx.currency || '₽';
+    document.getElementById('tx-edit-modal').style.display = 'flex';
+}
+function closeEditTx() {
+    document.getElementById('tx-edit-modal').style.display = 'none';
+    editingTxId = null;
+}
+function saveEditTx() {
+    const tx = transactions.find(t => t.id === editingTxId);
+    if (!tx) return closeEditTx();
+    const amount = Number(document.getElementById('edit-tx-amount').value);
+    if (!amount || amount <= 0) return uiAlert('Введите корректную сумму');
+    const currency = document.getElementById('edit-tx-currency').value;
+    tx.amount = amount;
+    tx.currency = currency;
+    tx.amountBase = convertToBase(amount, currency);
+    if (tx.type !== 'savings') tx.category = document.getElementById('edit-tx-category').value;
+    saveAll(); closeEditTx(); renderUI();
+}
+
 function doDeleteTx(id) {
     const idx = transactions.findIndex(t => t.id === id);
     if (idx < 0) return;
