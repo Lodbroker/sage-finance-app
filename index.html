@@ -33,6 +33,26 @@
             --bg-grad-1: #071E26; --bg-grad-2: #0E3846;
             --accent-sage: #4DA8DA; --accent-light: #90E0EF; --option-bg: #0E3846;
         }
+        body[data-theme="light"] {
+            --bg-grad-1: #F2F6F3; --bg-grad-2: #E2EDE6;
+            --card-bg: rgba(255, 255, 255, 0.72); --card-border: rgba(10, 30, 20, 0.10);
+            --text-main: #16241D; --text-muted: #5C6E64; --option-bg: #FFFFFF;
+            --accent-sage: #2F8F63; --accent-light: #1F6B4A;
+        }
+        @media (prefers-color-scheme: light) {
+            body[data-theme="system"] {
+                --bg-grad-1: #F2F6F3; --bg-grad-2: #E2EDE6;
+                --card-bg: rgba(255, 255, 255, 0.72); --card-border: rgba(10, 30, 20, 0.10);
+                --text-main: #16241D; --text-muted: #5C6E64; --option-bg: #FFFFFF;
+                --accent-sage: #2F8F63; --accent-light: #1F6B4A;
+            }
+        }
+        /* Фолбэк: если backdrop-filter не поддерживается — карточки плотнее */
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            :root { --card-bg: rgba(255, 255, 255, 0.14); }
+            body[data-theme="light"] { --card-bg: rgba(255, 255, 255, 0.95); }
+            body[data-theme="system"] { --card-bg: rgba(255, 255, 255, 0.95); }
+        }
 
         body.is-pro .badge-pro { display: none !important; }
 
@@ -100,7 +120,7 @@
         .btn-danger { background: var(--danger); color: #fff; }
         .btn-outline { background: transparent; border: 1px solid var(--card-border); color: var(--text-muted); }
 
-        .theme-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+        .theme-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
         .theme-btn { padding: 8px 4px; border-radius: 10px; border: 1px solid var(--card-border); text-align: center; font-size: 11px; cursor: pointer; background: rgba(255,255,255,0.05); }
         .theme-btn.active { border-color: var(--accent-sage); background: rgba(255,255,255,0.15); }
         .badge-pro { background: var(--gold); color: #000; font-size: 9px; padding: 2px 6px; border-radius: 6px; font-weight: bold; margin-left: 4px; }
@@ -351,25 +371,6 @@
         </div>
     </div>
 
-    <!-- PAGE 5: BOT CHAT -->
-    <div class="app-page" id="page-bot">
-        <div class="glass-card" style="margin-bottom: 0;">
-            <div style="font-size: 15px; font-weight: bold;"><i class="fa-solid fa-robot" style="color: var(--accent-sage);"></i> Sage Бот</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Пишите траты текстом, как в чате Telegram: <b>350 кофе</b>, <b>1500 такси</b>, <b>зп 80000</b></div>
-        </div>
-        <div class="chat-box" id="chat-box"></div>
-        <div class="chip-row">
-            <span class="chip" onclick="botQuick('350 кофе')">350 кофе</span>
-            <span class="chip" onclick="botQuick('1500 такси')">1500 такси</span>
-            <span class="chip" onclick="botQuick('баланс')">баланс</span>
-            <span class="chip" onclick="botQuick('долги')">долги</span>
-        </div>
-        <div class="chat-input-row">
-            <input type="text" class="form-input" id="chat-input" placeholder="350 кофе..." onkeydown="if(event.key==='Enter')sendBotMessage()">
-            <button class="btn-small" style="padding: 0 18px; font-size: 16px;" onclick="sendBotMessage()"><i class="fa-solid fa-paper-plane"></i></button>
-        </div>
-    </div>
-
     <!-- PAGE 6: SETTINGS -->
     <div class="app-page" id="page-settings">
         <div class="glass-card">
@@ -381,6 +382,8 @@
                     <div class="theme-btn" onclick="setTheme('graphite', this)">Графит</div>
                     <div class="theme-btn" onclick="setTheme('neon', this)">Неон <span class="badge-pro">PRO</span></div>
                     <div class="theme-btn" onclick="setTheme('ocean', this)">Океан <span class="badge-pro">PRO</span></div>
+                    <div class="theme-btn" onclick="setTheme('light', this)">Светлая</div>
+                    <div class="theme-btn" onclick="setTheme('system', this)">Системная</div>
                 </div>
             </div>
             <div class="form-group">
@@ -952,7 +955,7 @@ function autoApplyRecurring() {
             transactions.unshift({
                 id: Date.now() + r.id, type: 'expense', category: r.category,
                 amount: r.amount, currency: currentCurrency, amountBase: r.amount,
-                month: allMonths[now.getMonth()], date: `Авто: ${r.name}`
+                month: allMonths[now.getMonth()], date: `Авто: ${r.name}`, ts: Date.now()
             });
             applied[key] = applied[key] || [];
             applied[key].push(r.id);
@@ -974,7 +977,7 @@ function applyRecurringManually(id) {
     transactions.unshift({
         id: Date.now(), type: 'expense', category: r.category,
         amount: r.amount, currency: currentCurrency, amountBase: r.amount,
-        month: selectedMonth, date: `Авто: ${r.name}`
+        month: selectedMonth, date: `Авто: ${r.name}`, ts: Date.now()
     });
     const applied = JSON.parse(localStorage.getItem('sage_rec_applied')) || {};
     const key = `${new Date().getFullYear()}-${MONTH_NUM[selectedMonth]}`;
@@ -1210,99 +1213,6 @@ function renderDebtsList() {
     if (!debts.length) container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Долгов нет — отлично!</div>';
     document.getElementById('debt-owed').innerText = `${fmt(owedSum)} ${currentCurrency}`;
     document.getElementById('debt-iowe').innerText = `${fmt(ioweSum)} ${currentCurrency}`;
-}
-
-/* ============================================================
-   TELEGRAM-БОТ (парсер текстовых трат) — демо-режим внутри Mini App
-   В продакшене: сервер принимает сообщения бота и пишет в общую БД.
-   ============================================================ */
-const BOT_KEYWORDS = [
-    { keys: ['кофе','ресторан','обед','ужин','завтрак','еда','продукт','пицц','суши','бургер','кафе'], cat: 'Еда и продукты' },
-    { keys: ['такси','метро','бензин','авто','проезд','парковк','каршер','автобус'], cat: 'Транспорт' },
-    { keys: ['кино','игр','концерт','развлеч','пиво','бар'], cat: 'Развлечения' },
-    { keys: ['кот','кошк','собак','питом','ветеринар','корм'], cat: 'Питомцы' },
-    { keys: ['подписк','spotify','netflix','youtube','музык'], cat: 'Подписки' },
-    { keys: ['квартплат','жкх','интернет','свет','связь','аренд'], cat: 'Жилье и КУ' },
-    { keys: ['аптек','лекарств','врач','медицин'], cat: 'Здоровье' },
-    { keys: ['зп','зарплат','аванс','премия'], cat: 'Зарплата' }
-];
-
-function botGuessCategory(text) {
-    const t = text.toLowerCase();
-    for (const g of BOT_KEYWORDS) {
-        if (g.keys.some(k => t.includes(k))) return g.cat;
-    }
-    return Object.keys(expenseCategories)[0];
-}
-function chatAdd(role, text) {
-    const box = document.getElementById('chat-box');
-    const msg = document.createElement('div');
-    msg.className = `chat-msg ${role}`;
-    msg.innerHTML = text;
-    box.appendChild(msg);
-    box.scrollTop = box.scrollHeight;
-}
-function botQuick(text) {
-    document.getElementById('chat-input').value = text;
-    sendBotMessage();
-}
-function sendBotMessage() {
-    const input = document.getElementById('chat-input');
-    const text = input.value.trim();
-    if (!text) return;
-    triggerHaptic();
-    chatAdd('user', text);
-    input.value = '';
-    setTimeout(() => processBotCommand(text), 350);
-}
-function processBotCommand(text) {
-    const t = text.toLowerCase().trim();
-
-    // "баланс" / "итог"
-    if (/^(баланс|итог|остаток)$/.test(t)) {
-        const mTx = transactions.filter(x => x.month === selectedMonth);
-        const inc = mTx.filter(x => x.type === 'income').reduce((s, x) => s + x.amountBase, 0);
-        const exp = mTx.filter(x => x.type === 'expense').reduce((s, x) => s + x.amountBase, 0);
-        chatAdd('bot', `📊 Баланс за ${selectedMonth}: доходы ${fmt(inc)} ${currentCurrency}, расходы ${fmt(exp)} ${currentCurrency}, остаток <b>${fmt(inc - exp)} ${currentCurrency}</b>`);
-        return;
-    }
-    // "долги"
-    if (/^долг/.test(t)) {
-        const owed = debts.filter(d => d.direction === 'owed' && !d.repaid).reduce((s, d) => s + d.amount, 0);
-        const iowe = debts.filter(d => d.direction === 'iowe' && !d.repaid).reduce((s, d) => s + d.amount, 0);
-        chatAdd('bot', `💰 Долги: мне должны <b>${fmt(owed)}</b>, я должен <b>${fmt(iowe)}</b> ${currentCurrency}`);
-        return;
-    }
-    // "зп 80000" / "доход 5000 фриланс"
-    let m = t.match(/^(зп|зарплата|доход)\s+(\d+(?:[.,]\d+)?)\s*(.*)$/);
-    if (m) {
-        const amount = Number(m[2].replace(',', '.'));
-        const cat = m[3] && incomeCategories.some(c => m[3].includes(c.toLowerCase()))
-            ? incomeCategories.find(c => m[3].includes(c.toLowerCase()))
-            : incomeCategories[0];
-        addBotTx('income', cat, amount, text);
-        return;
-    }
-    // "350 кофе"
-    m = t.match(/^(\d+(?:[.,]\d+)?)\s+(.+)$/);
-    if (m) {
-        const amount = Number(m[1].replace(',', '.'));
-        const cat = botGuessCategory(m[2]);
-        addBotTx('expense', cat, amount, text);
-        return;
-    }
-    chatAdd('bot', '🤔 Не понял. Попробуйте: <b>350 кофе</b>, <b>1500 такси</b>, <b>зп 80000</b>, <b>баланс</b>, <b>долги</b>');
-}
-function addBotTx(type, category, amount, rawText) {
-    const base = convertToBase(amount, currentCurrency);
-    transactions.unshift({
-        id: Date.now(), type, category,
-        amount, currency: currentCurrency, amountBase: base,
-        month: selectedMonth, date: `бот: ${rawText.slice(0, 20)}`
-    });
-    saveAll(); renderUI();
-    const sign = type === 'income' ? '+' : '-';
-    chatAdd('bot', `✅ Записал: <b>${sign}${fmt(amount)} ${currentCurrency}</b> → «${category}» (${selectedMonth}). <a href="#" onclick="switchTab('dashboard', document.querySelectorAll('.nav-item')[0]); return false;" style="color:var(--accent-light);">Обзор</a>`);
 }
 
 /* ============================================================
@@ -1617,6 +1527,10 @@ function renderUI() {
     if (privacyOn) document.querySelectorAll('.hideable').forEach(el => el.innerText = '••••');
 }
 
+function chartMuted() {
+    return (getComputedStyle(document.body).getPropertyValue('--text-muted') || '').trim() || '#8E9F96';
+}
+
 /* ---------- Иконки категорий ---------- */
 const CAT_ICONS = [
     ['жилье', 'fa-house'], ['кварт', 'fa-house'], ['аренд', 'fa-house'], ['жкх', 'fa-faucet-drip'],
@@ -1865,7 +1779,7 @@ function renderChart(catTotals) {
             labels: Object.keys(catTotals).length ? Object.keys(catTotals) : ['Нет данных'],
             datasets: [{ data: Object.values(catTotals).length ? Object.values(catTotals) : [1], backgroundColor: ['#52B788', '#74C69D', '#FFD166', '#EF476F', '#118AB2', '#9B5DE5'], borderWidth: 0 }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#8E9F96', font: { size: 10 } } } }, cutout: '70%' }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
 }
 
@@ -1883,7 +1797,7 @@ function renderYearlyChart() {
                 { label: 'Расход', data: expByMonth, backgroundColor: '#EF476F' }
             ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#8E9F96', font: { size: 10 } } } }, scales: { x: { ticks: { color: '#8E9F96', font: { size: 9 } } }, y: { ticks: { color: '#8E9F96' } } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: chartMuted(), font: { size: 10 } } } }, scales: { x: { ticks: { color: chartMuted(), font: { size: 9 } } }, y: { ticks: { color: chartMuted() } } } }
     });
 }
 
@@ -1909,14 +1823,14 @@ document.getElementById('save-tx-btn').onclick = () => {
             goal.current += base;
             transactions.unshift({
                 id: Date.now(), type: 'savings', category: `Копилка: ${goal.name}`,
-                amount, currency, amountBase: base, month: selectedMonth, date: 'Сегодня'
+                amount, currency, amountBase: base, month: selectedMonth, date: 'Сегодня', ts: Date.now()
             });
         }
     } else {
         const category = document.getElementById('tx-category').value;
         transactions.unshift({
             id: Date.now(), type, category, amount, currency, amountBase: base, month: selectedMonth, date: 'Сегодня',
-            trip: (type === 'expense' && tripMode) || undefined
+            trip: (type === 'expense' && tripMode) || undefined, ts: Date.now()
         });
     }
     if (type === 'income') applyAutoSavings(base);
@@ -2174,7 +2088,7 @@ function applyAutoSavings(incomeBase) {
             const sum = Math.round(incomeBase * pct / 100);
             if (sum > 0) {
                 g.current = (g.current || 0) + sum;
-                transactions.unshift({ id: Date.now() + g.id, type: 'savings', category: `Копилка: ${g.name}`, amount: sum, currency: currentCurrency, amountBase: sum, month: selectedMonth, date: 'Автоперевод' });
+                transactions.unshift({ id: Date.now() + g.id, type: 'savings', category: `Копилка: ${g.name}`, amount: sum, currency: currentCurrency, amountBase: sum, month: selectedMonth, date: 'Автоперевод', ts: Date.now() });
                 any = true;
             }
         }
@@ -2327,7 +2241,7 @@ async function handleInviteParam() {
     const savedTheme = localStorage.getItem('sage_theme');
     if (savedTheme) {
         document.body.setAttribute('data-theme', savedTheme);
-        document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.innerText.trim().startsWith(savedTheme === 'sage' ? 'Шалфей' : savedTheme === 'graphite' ? 'Графит' : savedTheme === 'neon' ? 'Неон' : 'Океан')));
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', (b.getAttribute('onclick') || '').includes(`'${savedTheme}'`)));
     }
     // валюта
     document.getElementById('currency-select').value = currentCurrency;
@@ -2348,8 +2262,6 @@ async function handleInviteParam() {
     if (pinCode) showPinScreen('Введите PIN-код');
 
     logEvent('app_open');
-    // Приветствие бота
-    chatAdd('bot', '👋 Привет! Я Sage Бот. Пишите траты текстом: <b>350 кофе</b>, <b>1500 такси</b> или спросите <b>баланс</b> / <b>долги</b>.');
 })();
 </script>
 </body>
