@@ -1396,7 +1396,7 @@ function saveNewCategory() {
 function deleteCategory(catName) {
     if (confirm(`Удалить категорию "${catName}"?`)) {
         delete expenseCategories[catName];
-        localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
+        saveAll();
         renderUI();
     }
 }
@@ -1900,6 +1900,7 @@ function getStatePayload() {
     return {
         transactions, goals, deposits, debts, recurring,
         expenseCategories, incomeCategories, rates, currency: currentCurrency,
+        catTags,
         isPro, proUntil
     };
 }
@@ -1911,6 +1912,7 @@ function applyState(s) {
     if (s.debts)               { debts = s.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
     if (s.recurring)           { recurring = s.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
     if (s.expenseCategories)   { expenseCategories = s.expenseCategories; localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories)); }
+    if (s.catTags)             { catTags = s.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
     if (s.incomeCategories)    { incomeCategories = s.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
     if (s.rates)               { rates = s.rates; localStorage.setItem('sage_rates', JSON.stringify(rates));
                                  document.getElementById('rate-usd').value = rates.USD;
@@ -2101,6 +2103,7 @@ function renderInsights() {
 function cycleTag(cat) {
     catTags[cat] = catTags[cat] === 'need' ? 'want' : 'need';
     localStorage.setItem('sage_cat_tags', JSON.stringify(catTags));
+    saveAll();
     renderUI();
 }
 
