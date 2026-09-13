@@ -184,7 +184,7 @@
             <div class="avatar" id="user-avatar">U</div>
             <div>
                 <div style="font-size: 11px; color: var(--text-muted);">
-                    Sage Finance v7 <span id="pro-status-tag" class="badge-pro" style="display:none;">PRO ACTIVE</span>
+                    Sage Finance <span id="pro-status-tag" class="badge-pro" style="display:none;">PRO ACTIVE</span>
                 </div>
                 <div style="font-weight: bold; font-size: 14px;" id="user-name">Пользователь</div>
             </div>
@@ -684,6 +684,7 @@
                 <button class="btn-submit" style="background: var(--gold); opacity: 0.85; margin-bottom: 8px;" onclick="buyProSubscription('year')">PRO на год — 1500 ⭐ (2 мес в подарок)</button>
                 <button class="btn-submit btn-outline" style="margin-bottom: 8px;" onclick="startTrial()">🎁 Попробовать 7 дней бесплатно</button>
                 <button class="btn-submit btn-outline" style="margin-bottom: 10px;" onclick="donateStars()">☕ Поддержать проект (25 ⭐)</button>
+                <div style="font-size: 11px; color: var(--text-muted); text-align: center;">Нет звёзд? Купите через @PremiumBot — там работает СберПэй и российские карты, а потом оплатите здесь</div>
                 <button class="btn-submit btn-outline" onclick="closeProModal()">Отмена</button>
             </div>
         </div>
@@ -695,7 +696,6 @@
         <div class="nav-item" onclick="switchTab('budget', this)"><i class="fa-solid fa-list-check"></i> Бюджет</div>
         <div class="nav-item" onclick="switchTab('goals', this)"><i class="fa-solid fa-bullseye"></i> Цели</div>
         <div class="nav-item" onclick="switchTab('pro', this)"><i class="fa-solid fa-crown"></i> PRO</div>
-        <div class="nav-item" onclick="switchTab('bot', this)"><i class="fa-solid fa-robot"></i> Бот</div>
         <div class="nav-item" onclick="switchTab('settings', this)"><i class="fa-solid fa-user"></i> Опции</div>
     </div>
 
@@ -1571,7 +1571,7 @@ function renderUI() {
         item.className = 'tx-item';
         item.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="tx-icon"><i class="fa-solid ${tx.type === 'income' ? 'fa-arrow-down' : (tx.type === 'savings' ? 'fa-piggy-bank' : 'fa-bag-shopping')}"></i></div>
+                <div class="tx-icon"><i class="fa-solid ${catIcon(tx.category, tx.type)}"></i></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${tx.category}</div>
                     <div style="font-size: 10px; color: var(--text-muted);">${tx.date}</div>
@@ -1615,6 +1615,32 @@ function renderUI() {
     renderOnboarding();
     applyTripUI();
     if (privacyOn) document.querySelectorAll('.hideable').forEach(el => el.innerText = '••••');
+}
+
+/* ---------- Иконки категорий ---------- */
+const CAT_ICONS = [
+    ['жилье', 'fa-house'], ['кварт', 'fa-house'], ['аренд', 'fa-house'], ['жкх', 'fa-faucet-drip'],
+    ['еда', 'fa-utensils'], ['продукт', 'fa-cart-shopping'], ['кафе', 'fa-mug-saucer'], ['ресторан', 'fa-utensils'],
+    ['такси', 'fa-taxi'], ['метро', 'fa-train-subway'], ['транспорт', 'fa-bus'], ['бензин', 'fa-gas-pump'], ['авто', 'fa-car-side'], ['каршер', 'fa-car-side'],
+    ['кино', 'fa-film'], ['развлеч', 'fa-clapperboard'], ['игр', 'fa-gamepad'],
+    ['питом', 'fa-paw'], ['кот', 'fa-cat'], ['собак', 'fa-dog'], ['ветеринар', 'fa-stethoscope'],
+    ['подписк', 'fa-ticket'], ['spotify', 'fa-music'], ['netflix', 'fa-tv'], ['youtube', 'fa-youtube'],
+    ['здоров', 'fa-heart-pulse'], ['аптек', 'fa-prescription-bottle-medical'], ['врач', 'fa-user-doctor'],
+    ['зарплат', 'fa-briefcase'], ['зп', 'fa-briefcase'], ['аванс', 'fa-briefcase'], ['премия', 'fa-award'],
+    ['фриланс', 'fa-laptop-code'], ['инвест', 'fa-chart-line'], ['кэшбэк', 'fa-gift'],
+    ['одежд', 'fa-shirt'], ['обувь', 'fa-shoe-prints'], ['связь', 'fa-mobile-screen'], ['интернет', 'fa-wifi'], ['телефон', 'fa-mobile-screen'],
+    ['образован', 'fa-graduation-cap'], ['курс', 'fa-graduation-cap'], ['спорт', 'fa-dumbbell'], ['фитнес', 'fa-dumbbell'],
+    ['путешеств', 'fa-plane'], ['отпуск', 'fa-umbrella-beach'], ['самолет', 'fa-plane'],
+    ['подар', 'fa-gift'], ['дети', 'fa-children'], ['быт', 'fa-basket-shopping'], ['ремонт', 'fa-hammer'],
+    ['страхов', 'fa-shield-halved'], ['налог', 'fa-file-invoice'], ['кредит', 'fa-credit-card'], ['ипотек', 'fa-building-columns'],
+    ['алко', 'fa-wine-glass'], ['табак', 'fa-smoking']
+];
+function catIcon(cat, type) {
+    const c = String(cat || '').toLowerCase();
+    for (const [k, i] of CAT_ICONS) if (c.includes(k)) return i;
+    if (type === 'income') return 'fa-arrow-down';
+    if (type === 'savings') return 'fa-piggy-bank';
+    return 'fa-bag-shopping';
 }
 
 /* ---------- Удаление операций (long-press, с отменой) ---------- */
@@ -1782,7 +1808,7 @@ function renderBudgetPlanner(catTotals) {
         card.style.marginBottom = "14px";
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:4px;">
-                <span><span onclick="cycleTag('${cat}')" style="cursor:pointer;" title="нужное/желание — нажмите чтобы сменить">${cat}</span> <i class="fa-solid fa-trash" style="font-size:10px; color:var(--danger); cursor:pointer; margin-left:6px;" onclick="deleteCategory('${cat}')"></i></span>
+                <span><i class="fa-solid ${catIcon(cat, 'expense')}" style="width:16px; color:var(--accent-sage); font-size:11px;"></i> <span onclick="cycleTag('${cat}')" style="cursor:pointer;" title="нужное/желание — нажмите чтобы сменить">${cat}</span> <i class="fa-solid fa-trash" style="font-size:10px; color:var(--danger); cursor:pointer; margin-left:6px;" onclick="deleteCategory('${cat}')"></i></span>
                 <span class="hideable" style="font-weight:bold;">${fmt(fact)} / ${fmt(plan)} ${currentCurrency} (${pct}%)</span>
             </div>
             <div style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
@@ -1911,6 +1937,7 @@ document.getElementById('currency-select').onchange = (e) => {
 
 /* ============================================================
    ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ (Cloudflare Worker + Supabase)
+   ВАЖНО: после деплоя замените URL ниже на ваш (шаг 3 инструкции)
    ============================================================ */
 const API_URL = 'https://sage-api.ivan-xls.workers.dev';
 let cloudSaveTimer = null, cloudVersion = 0;
@@ -2071,6 +2098,8 @@ function weeklyBlockHTML() {
 function renderInsights() {
     const card = document.getElementById('insights-card');
     if (!card) return;
+    if (!transactions.length) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
     const mi = MONTH_NUM[selectedMonth];
     const prevMonth = allMonths[(mi + 11) % 12];
     const cur = {}, prev = {};
@@ -2095,7 +2124,7 @@ function renderInsights() {
     });
     if (top) lines.push(`📈 «${top}»: +${fmt(topD)} ${currentCurrency} к прошлому месяцу`);
     const subs = cur['Подписки'] || 0;
-    if (subs > 0) lines.push(`📺 Подписки съели ${fmt(subs)} ${currentCurrency}${inc ? ` (${Math.round(subs / inc * 100)}% дохода)` : ''}`);
+    if (subs > 0 && inc > 0) lines.push(`📺 Подписки съели ${fmt(subs)} ${currentCurrency} (${Math.round(subs / inc * 100)}% дохода)`);
     if (inc > 0) {
         lines.push(`💰 Сбережения: ${Math.round(sav / inc * 100)}% дохода`);
         const tagOf = c => catTags[c] || 'want';
@@ -2279,7 +2308,7 @@ async function handleInviteParam() {
     const p = tg.initDataUnsafe && tg.initDataUnsafe.start_param;
     if (!p) return;
     if (/^[a-z0-9-]{4,14}$/i.test(p)) { await familyJoin(p.toUpperCase()); return; }
-    const tabs = { balance: 'dashboard', budget: 'budget', goals: 'goals', debts: 'goals', pro: 'pro', bot: 'bot', settings: 'settings' };
+    const tabs = { balance: 'dashboard', budget: 'budget', goals: 'goals', debts: 'goals', pro: 'pro', settings: 'settings' };
     const tab = tabs[p.toLowerCase()];
     if (tab) {
         const idx = ['dashboard', 'budget', 'goals', 'pro', 'bot', 'settings'].indexOf(tab);
