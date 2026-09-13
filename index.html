@@ -1959,6 +1959,8 @@ async function familyJoin(code) {
             body: JSON.stringify({ initData: tg.initData, action: 'join', code: code.trim().toUpperCase() })
         });
         const d = await r.json();
+        if (d.error === 'owner') { uiAlert('Вы владелец семьи с другими участниками — сначала попросите родных создать свою семью (иначе они потеряют общий бюджет).'); return; }
+        if (d.error === 'rate') { uiAlert('Слишком много попыток. Подождите минуту.'); return; }
         if (d.ok) {
             logEvent('family_join');
             localStorage.removeItem('sage_pending_invite');
