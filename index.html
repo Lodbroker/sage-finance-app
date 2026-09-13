@@ -726,10 +726,10 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
 const tg = window.Telegram?.WebApp;
 /* ---------- Платформенный слой: единая точка для tg / MAX / Web ---------- */
 const platform = {
-    get inTelegram() { return !!tg && !!this.initData; },
-    get initData() { return tg ? platform.initData : ''; },
-    get user() { return (tg && platform.user) || null; },
-    get startParam() { return (tg && platform.startParam) || ''; },
+    get inTelegram() { return !!tg && !!tg.initData; },
+    get initData() { return tg ? tg.initData : ''; },
+    get user() { return (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || null; },
+    get startParam() { return (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ''; },
     ready() { try { tg?.ready(); tg?.expand(); } catch (e) {} },
     haptic(style) { try { if (style === 'success') tg?.HapticFeedback?.notificationOccurred?.('success'); else tg?.HapticFeedback?.impactOccurred?.(style || 'light'); } catch (e) {} },
     showAlert(msg) { if (tg && tg.showAlert) { try { tg.showAlert(String(msg)); return true; } catch (e) {} } window.alert(msg); return false; },
@@ -818,7 +818,7 @@ function saveAll() {
     localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
     localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories));
     localStorage.setItem('sage_rates', JSON.stringify(rates));
-    cloudSave();
+    try { cloudSave(); } catch (e) {}
 }
 
 /* ---------- Месячный селектор ---------- */
@@ -2275,10 +2275,10 @@ async function handleInviteParam() {
 
 /* ---------- Инициализация ---------- */
 (async function init() {
-    await cloudLoad();
-    await handleInviteParam();
-    await fetchCbRates();
-    await fetchPartners();
+    try { await cloudLoad(); } catch (e) { console.error('cloudLoad failed', e); }
+    try { await handleInviteParam(); } catch (e) {}
+    try { await fetchCbRates(); } catch (e) {}
+    try { await fetchPartners(); } catch (e) {}
     // тема
     const savedTheme = localStorage.getItem('sage_theme');
     if (savedTheme) {
