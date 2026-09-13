@@ -259,7 +259,12 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                 </div>
             </div>
             <div id="slide-0" class="carousel-slide">
-                <div class="chart-container"><canvas id="expenseChart"></canvas></div>
+                <div class="chart-container"><canvas id="expenseChart"></canvas>
+                    <div id="chart-total" class="hideable" style="position:absolute; top:50%; left:34%; transform:translate(-50%,-50%); text-align:center; pointer-events:none; line-height:1.25;">
+                        <div id="chart-total-sum" style="font-size:16px; font-weight:700; color:var(--text-main);"></div>
+                        <div id="chart-total-label" style="font-size:10px; font-weight:600; color:var(--text-muted);"></div>
+                    </div>
+                </div>
             </div>
             <div id="slide-1" class="carousel-slide" style="display:none; position:relative;">
                 <div class="chart-container"><canvas id="yearlyChart"></canvas></div>
@@ -1576,7 +1581,7 @@ function renderUI() {
                     <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}</div>
                 </div>
             </div>
-            <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : '#fff')};">
+            <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : 'var(--text-main)')};">
                 ${tx.type === 'income' ? '+' : '-'}${txDisplay(tx)}
             </div>`;
         txListEl.appendChild(item);
@@ -1623,29 +1628,7 @@ function renderUI() {
 function chartMuted() {
     return (getComputedStyle(document.body).getPropertyValue('--text-muted') || '').trim() || '#8E9F96';
 }
-/* Итог трат месяца в центре кольца */
-const centerTotalPlugin = {
-    id: 'centerTotal',
-    afterDraw(chart) {
-        const { ctx, chartArea } = chart;
-        if (!chartArea) return;
-        const hasData = chart.data.labels.length && chart.data.labels[0] !== 'Нет данных';
-        const total = hasData ? chart.data.datasets[0].data.reduce((a, b) => a + b, 0) : 0;
-        const x = (chartArea.left + chartArea.right) / 2;
-        const y = (chartArea.top + chartArea.bottom) / 2;
-        const mainColor = (getComputedStyle(document.body).getPropertyValue('--text-main') || '').trim() || '#F4F7F5';
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = '700 16px -apple-system, sans-serif';
-        ctx.fillStyle = mainColor;
-        ctx.fillText(privacyOn ? '••••' : fmt(total), x, y - 8);
-        ctx.font = '600 10px -apple-system, sans-serif';
-        ctx.fillStyle = chartMuted();
-        ctx.fillText(privacyOn ? '' : 'расходы ' + currentCurrency, x, y + 11);
-        ctx.restore();
-    }
-};
+
 
 /* ---------- Иконки категорий ---------- */
 const CAT_ICONS = [
@@ -1938,8 +1921,14 @@ function renderChart(catTotals) {
             labels: Object.keys(catTotals).length ? Object.keys(catTotals) : ['Нет данных'],
             datasets: [{ data: Object.values(catTotals).length ? Object.values(catTotals) : [1], backgroundColor: ['#52B788', '#74C69D', '#FFD166', '#EF476F', '#118AB2', '#9B5DE5'], borderWidth: 0 }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }, plugins: [centerTotalPlugin]
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
+    const hasData = Object.keys(catTotals).length > 0;
+    const totalSum = hasData ? Object.values(catTotals).reduce((a, b) => a + b, 0) : 0;
+    const sumEl = document.getElementById('chart-total-sum');
+    const labelEl = document.getElementById('chart-total-label');
+    if (sumEl) sumEl.innerText = fmt(totalSum);
+    if (labelEl) labelEl.innerText = hasData ? ('расходы ' + currentCurrency) : '';
 }
 
 function renderYearlyChart() {
