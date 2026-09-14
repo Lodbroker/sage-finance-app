@@ -95,6 +95,14 @@
         .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-sage); display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; }
         .icon-btn { width: 34px; height: 34px; border-radius: 10px; background: var(--input-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; font-size: 14px; }
 
+        /* Заголовки подразделов на странице настроек */
+        .section-title {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--text-muted); margin: 18px 22px 0; font-weight: 700;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section-title::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+
         .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px; }
         .kpi-card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 16px; padding: 12px; }
         .kpi-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 4px; }
@@ -175,13 +183,6 @@
         .pin-shake { animation: shake 0.35s; }
         @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)} }
 
-        /* Разделители-подзаголовки на странице настроек */
-        .settings-header { font-size: 11px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--text-muted); font-weight: 700; margin: 20px 20px 2px; }
-        .settings-header:first-child { margin-top: 4px; }
-        .settings-subheader { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-        .settings-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
-        .settings-divider { border-top: 1px solid rgba(255,255,255,0.08); margin: 12px 0 10px; padding-top: 12px; }
-
         /* Чат-бот */
         .chat-box { margin: 0 16px; height: calc(100vh - 265px); min-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 2px; }
         .chat-msg { max-width: 78%; padding: 10px 13px; border-radius: 16px; font-size: 13px; line-height: 1.4; }
@@ -197,6 +198,7 @@
         .tag.red { background: rgba(230,57,70,0.2); color: #FFA8A8; }
         .tag.gold { background: rgba(255,209,102,0.2); color: var(--gold); }
     </style>
+<base target="_blank">
 </head>
 <body>
 <script>
@@ -402,7 +404,7 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
     <!-- PAGE 6: SETTINGS -->
     <div class="app-page" id="page-settings">
 
-        <div class="settings-header">Оформление и валюта</div>
+        <div class="section-title">Внешний вид и валюта</div>
         <div class="glass-card">
             <div class="form-group">
                 <label class="form-label">Цветовая тема</label>
@@ -423,18 +425,32 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                     <option value="€">Евро (€)</option>
                 </select>
             </div>
-            <div class="settings-divider">
-                <div class="settings-subheader">Курсы валют</div>
-                <div class="settings-note" style="margin-bottom: 10px;">Курсы USD и EUR к базовой валюте (обновляются автоматически с ЦБ РФ). Траты в USD/EUR конвертируются при учёте.</div>
-                <div style="display:flex; gap:8px;">
-                    <div style="flex:1;"><label class="form-label">USD</label><input type="number" step="0.01" class="form-input" id="rate-usd" style="padding: 10px;"></div>
-                    <div style="flex:1;"><label class="form-label">EUR</label><input type="number" step="0.01" class="form-input" id="rate-eur" style="padding: 10px;"></div>
-                </div>
-                <button class="btn-small" style="margin-top: 8px;" onclick="saveRates()">Сохранить курсы</button>
+        </div>
+
+        <div class="section-title">Курсы валют</div>
+        <div class="glass-card">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Курсы к базовой валюте (обновите вручную по курсу ЦБ РФ или подтяните автоматически — курсы ЦБ подгружаются сервером раз в сутки). Траты в USD/EUR автоматически конвертируются при учёте.</div>
+            <div style="display:flex; gap:8px;">
+                <div style="flex:1;"><label class="form-label">USD</label><input type="number" step="0.01" class="form-input" id="rate-usd" style="padding: 10px;"></div>
+                <div style="flex:1;"><label class="form-label">EUR</label><input type="number" step="0.01" class="form-input" id="rate-eur" style="padding: 10px;"></div>
+            </div>
+            <button class="btn-small" style="margin-top: 8px;" onclick="saveRates()">Сохранить курсы</button>
+        </div>
+
+        <div class="section-title">Лимиты и режимы</div>
+        <div class="glass-card">
+            <div class="form-group" style="margin-top: 0; margin-bottom: 8px;">
+                <label class="form-label">Недельный лимит трат (0 — выключен)</label>
+                <input type="number" class="form-input" id="week-limit-input" placeholder="10000" inputmode="decimal">
+            </div>
+            <button class="btn-small" style="margin-bottom: 10px;" onclick="saveWeekLimit()">Сохранить лимит</button>
+            <div class="toggle-row">
+                <div><div style="font-size: 13px; font-weight: 600;">Режим поездки</div><div style="font-size: 11px; color: var(--text-muted);">Траты не попадают в бюджет и статистику</div></div>
+                <div class="toggle" id="trip-toggle" onclick="toggleTripMode()"></div>
             </div>
         </div>
 
-        <div class="settings-header">Безопасность и доступ</div>
+        <div class="section-title">Безопасность</div>
         <div class="glass-card">
             <div class="toggle-row">
                 <div><div style="font-size: 13px; font-weight: 600;">PIN-код (4 цифры) <span class="badge-pro">PRO</span></div><div style="font-size: 11px; color: var(--text-muted);" id="pin-status">Не установлен</div></div>
@@ -449,10 +465,9 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                 <div class="toggle" id="privacy-toggle-row" onclick="togglePrivacy()"></div>
             </div>
 
-            <div class="settings-divider">
-                <div class="settings-subheader"><i class="fa-solid fa-bolt" style="color:var(--accent-sage);"></i> Быстрая запись с экрана</div>
-                <div class="settings-note" style="margin-bottom: 8px;">Трата голосом или виджетом, без открытия приложения. Полная инструкция по настройке — в боте, команда /setup.</div>
-                <div class="settings-note" style="margin-bottom: 8px;">Ключ быстрой записи — ниже. Кто знает ключ, тот может добавлять траты в бюджет. Храните как пароль.</div>
+            <div style="border-top:1px solid rgba(255,255,255,0.08); margin-top:6px; padding-top:10px;">
+                <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Ключ быстрой записи</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Для голосовых команд и виджетов. Кто знает ключ, тот может добавлять траты. Храните как пароль.</div>
                 <div id="quick-token-box" style="display:none; font-size:12px; margin-bottom:8px; word-break:break-all;"></div>
                 <div style="display:flex; gap:8px;">
                     <button class="btn-small" onclick="quickTokenShow()">Показать ключ</button>
@@ -460,44 +475,38 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                 </div>
             </div>
 
-            <div class="settings-note" style="margin-top: 12px;">
-                Что под капотом: вход по подписи Telegram (без паролей), облако на защищённом сервере, права PRO решает только сервер, PIN — это замок экрана, а не шифрование. Данные не передаются третьим лицам.
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 12px; line-height: 1.5;">
+                Что под капотом: вход по подписи Telegram (без паролей), облако на защищённом сервере, права PRO решает только сервер, PIN это замок экрана, а не шифрование. Данные не передаются третьим лицам.
             </div>
         </div>
 
-        <div class="settings-header">Лимиты и режимы</div>
+        <div class="section-title">Быстрая запись с экрана</div>
         <div class="glass-card">
-            <div class="form-group" style="margin-top: 0; margin-bottom: 8px;">
-                <label class="form-label">Недельный лимит трат (0 — выключен)</label>
-                <input type="number" class="form-input" id="week-limit-input" placeholder="10000" inputmode="decimal">
-            </div>
-            <button class="btn-small" style="margin-bottom: 6px;" onclick="saveWeekLimit()">Сохранить лимит</button>
-            <div class="toggle-row">
-                <div><div style="font-size: 13px; font-weight: 600;">Режим поездки</div><div style="font-size: 11px; color: var(--text-muted);">Траты не попадают в бюджет и статистику</div></div>
-                <div class="toggle" id="trip-toggle" onclick="toggleTripMode()"></div>
-            </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Трата голосом или виджетом, без открытия приложения. Полная инструкция — в боте, команда /setup.</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Ключ выдаётся в разделе «Безопасность» выше (кнопка «Показать ключ»).</div>
         </div>
 
-        <div class="settings-header">Семья</div>
+        <div class="section-title">Семейный доступ</div>
         <div class="glass-card">
             <div id="family-status" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Статус: локально (облако не подключено)</div>
             <div style="display:flex; gap:8px;">
                 <button class="btn-small" onclick="familyCreate()">Создать семью</button>
                 <button class="btn-small btn-outline" onclick="familyJoin()">Войти по коду</button>
             </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Владельцу приходит уведомление в бота, когда кто-то вступает по коду. Бесплатно — до 3 участников, PRO — безлимит.</div>
         </div>
 
-        <div class="settings-header">Данные и бэкап</div>
+        <div class="section-title">Резервные копии</div>
         <div class="glass-card">
-            <div class="settings-note" style="margin-bottom: 10px;">Перенесите все данные на другое устройство или аккаунт без сервера.</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Перенесите все данные на другое устройство или аккаунт без сервера.</div>
             <button class="btn-submit" style="margin-bottom: 8px;" onclick="downloadBackup()"><i class="fa-solid fa-download"></i> Скачать бэкап</button>
             <input type="file" id="restore-input" accept=".json" style="display:none;">
             <button class="btn-submit" style="background: transparent; border: 1px solid var(--card-border); color: var(--text-main);" onclick="document.getElementById('restore-input').click()"><i class="fa-solid fa-upload"></i> Восстановить из файла</button>
         </div>
 
-        <div class="settings-header">Связь и прочее</div>
-        <button class="btn-submit" style="margin: 4px 16px 8px; width: calc(100% - 32px); background: rgba(255,255,255,0.1); border: 1px solid var(--card-border); color: var(--text-main);" onclick="sendFeedback()"><i class="fa-solid fa-comment-dots"></i> Написать разработчику</button>
-        <button class="btn-submit btn-danger" style="margin: 0 16px 12px; width: calc(100% - 32px);" onclick="clearAllData()">Сбросить все данные</button>
+        <div class="section-title">Связь и опасная зона</div>
+        <button class="btn-submit" style="margin: 4px 16px 4px; width: calc(100% - 32px); background: rgba(255,255,255,0.1); border: 1px solid var(--card-border); color: var(--text-main);" onclick="sendFeedback()"><i class="fa-solid fa-comment-dots"></i> Написать разработчику</button>
+        <button class="btn-submit btn-danger" style="margin: 4px 16px 12px; width: calc(100% - 32px);" onclick="clearAllData()">Сбросить все данные</button>
     </div>
 
     <!-- FAB Button -->
@@ -857,6 +866,14 @@ let chartInstance = null, yearlyChartInstance = null, currentSlide = 0;
 
 /* ---------- Хелперы ---------- */
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 }); }
+/* Правильные русские склонения: plural(5, 'операция', 'операции', 'операций') */
+function plural(n, one, few, many) {
+    n = Math.abs(Number(n) || 0);
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+}
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function jsAttr(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '\\\\').replace(/"/g, '\\"'); }
 function convertToBase(amount, currency) {
@@ -911,6 +928,7 @@ function switchTab(tabId, el) {
     document.getElementById(`page-${tabId}`).classList.add('active');
     el.classList.add('active');
     document.getElementById('open-modal-btn').style.display = (tabId === 'dashboard') ? 'flex' : 'none';
+    if (tabId === 'bot') setTimeout(() => document.getElementById('chat-box').scrollTop = 99999, 50);
 }
 function switchSubTab(tabId, el) {
     triggerHaptic();
@@ -1100,16 +1118,18 @@ function renderRecurringList() {
                 <div class="tx-icon"><i class="fa-solid fa-rotate"></i></div>
                 <div>
                     <div style="font-weight:bold; font-size:13px;">${esc(r.name)} ${r.remind ? '<i class="fa-solid fa-bell" style="font-size:10px;color:var(--gold);"></i>' : ''}</div>
-                    <div style="font-size:10px; color:var(--text-muted);">каждое ${r.day}-е · ${esc(r.category)}</div>
+                    <div style="font-size:10px; color:var(--text-muted);">каждый ${r.day}-е · ${esc(r.category)}</div>
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
                 <span class="hideable" style="font-weight:bold; font-size:13px;">${fmt(r.amount)} ${currentCurrency}</span>
                 ${applied
                     ? '<span class="tag green">добавлено</span>'
-                    : `<button class="btn-small btn-outline" onclick="event.stopPropagation(); applyRecurringManually(${r.id})">+ в ${selectedMonth.slice(0,3)}</button>`}
+                    : `<button class="btn-small btn-outline" data-rec-apply="${r.id}">+ в ${selectedMonth.slice(0,3)}</button>`}
             </div>`;
-        row.onclick = () => openEditRecModal(r.id);
+        const applyBtn = row.querySelector('[data-rec-apply]');
+        if (applyBtn) applyBtn.addEventListener('click', (e) => { e.stopPropagation(); applyRecurringManually(r.id); });
+        row.addEventListener('click', () => openEditRecModal(r.id));
         container.appendChild(row);
     });
 }
@@ -1144,7 +1164,7 @@ function saveNewRecurring() {
     const amount = Number(document.getElementById('new-rec-amount').value);
     const day = Math.min(28, Math.max(1, Number(document.getElementById('new-rec-day').value) || 1));
     if (!name || !amount) return uiAlert('Заполните название и сумму');
-    if (!isPro && recurring.length >= 3) { openProModal('🔄 До 3 постоянных платежей в бесплатной версии.'); return; }
+    if (!isPro && recurring.length >= 3) { openProModal(`🔄 Бесплатная версия: до 3 постоянных платежей, у вас уже ${recurring.length}. PRO открывает безлимит.`); return; }
     const wantRemind = document.getElementById('new-rec-remind').classList.contains('on');
     if (wantRemind && !isPro) { openProModal('🔔 Push-напоминания о платежах — функция PRO.'); return; }
     recurring.push({ id: Date.now(), name, category, amount, day, remind: wantRemind });
@@ -1199,7 +1219,7 @@ function saveNewDeposit() {
     const rate = Number(document.getElementById('new-dep-rate').value);
     const date = document.getElementById('new-dep-date').value || new Date().toISOString().slice(0, 10);
     if (!name || !amount || !rate) return uiAlert('Заполните название, сумму и ставку');
-    if (!isPro && deposits.length >= 2) { openProModal('🏛 До 2 вкладов в бесплатной версии.'); return; }
+    if (!isPro && deposits.length >= 2) { openProModal(`🏛 Бесплатная версия: до 2 вкладов, у вас уже ${deposits.length}. PRO открывает безлимит.`); return; }
     deposits.push({ id: Date.now(), name, amount, rate, date });
     saveAll(); closeAddDepositModal(); renderUI();
 }
@@ -1241,10 +1261,12 @@ function renderDepositsList() {
                 </div>
             </div>
             <div style="display:flex; gap:6px; margin-top:10px;">
-                <button class="btn-small btn-outline" style="font-size:10px;" onclick="editDepositField(${d.id},'amount')">Сумма</button>
-                <button class="btn-small btn-outline" style="font-size:10px;" onclick="editDepositField(${d.id},'rate')">Ставка</button>
-                <button class="btn-small btn-danger" style="font-size:10px;" onclick="deleteDeposit(${d.id})">Закрыть</button>
+                <button class="btn-small btn-outline" style="font-size:10px;" data-dep-edit="${d.id}" data-dep-field="amount">Сумма</button>
+                <button class="btn-small btn-outline" style="font-size:10px;" data-dep-edit="${d.id}" data-dep-field="rate">Ставка</button>
+                <button class="btn-small btn-danger" style="font-size:10px;" data-dep-del="${d.id}">Закрыть</button>
             </div>`;
+        card.querySelectorAll('[data-dep-edit]').forEach(b => b.addEventListener('click', () => editDepositField(d.id, b.dataset.depField)));
+        card.querySelector('[data-dep-del]').addEventListener('click', () => deleteDeposit(d.id));
         container.appendChild(card);
     });
     if (!deposits.length) container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Вкладов нет — нажмите «+ Вклад»</div>';
@@ -1300,14 +1322,16 @@ function renderDebtsList() {
                 </div>
                 <div>
                     <div style="font-weight:bold; font-size:13px;">${esc(d.person)}</div>
-                    <div style="font-size:10px; color:var(--text-muted);">${d.direction === 'owed' ? 'должен мне' : 'я должен'}${d.note ? ' · ' + d.note : ''}</div>
+                    <div style="font-size:10px; color:var(--text-muted);">${d.direction === 'owed' ? 'должен мне' : 'я должен'}${d.note ? ' · ' + esc(d.note) : ''}</div>
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
                 <span class="hideable" style="font-weight:bold; font-size:13px; color:${d.direction === 'owed' ? 'var(--accent-light)' : '#FFA8A8'};">${fmt(d.amount)} ${currentCurrency}</span>
-                <button class="btn-small ${d.repaid ? 'btn-outline' : ''}" style="font-size:10px;" onclick="toggleDebtRepaid(${d.id})">${d.repaid ? 'вернул' : 'вернул?'}</button>
-                <i class="fa-solid fa-trash" style="font-size:11px; color:var(--danger); cursor:pointer;" onclick="deleteDebt(${d.id})"></i>
+                <button class="btn-small ${d.repaid ? 'btn-outline' : ''}" style="font-size:10px;" data-debt-toggle="${d.id}">${d.repaid ? 'вернул' : 'вернул?'}</button>
+                <i class="fa-solid fa-trash" style="font-size:11px; color:var(--danger); cursor:pointer;" data-debt-del="${d.id}"></i>
             </div>`;
+        row.querySelector('[data-debt-toggle]').addEventListener('click', () => toggleDebtRepaid(d.id));
+        row.querySelector('[data-debt-del]').addEventListener('click', () => deleteDebt(d.id));
         container.appendChild(row);
     });
     if (!debts.length) container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Долгов нет — отлично!</div>';
@@ -1358,7 +1382,7 @@ document.getElementById('csv-import-input').addEventListener('change', function 
             added++;
         });
         saveAll(); renderUI();
-        document.getElementById('import-result').innerText = `✅ Импортировано операций: ${added} (в ${selectedMonth})`;
+        document.getElementById('import-result').innerText = `✅ Импортировано ${added} ${plural(added, 'операция', 'операции', 'операций')} (в ${selectedMonth})`;
     };
     reader.readAsText(file, 'utf-8');
     e.target.value = '';
@@ -1436,7 +1460,6 @@ function openAddCatModal() { triggerHaptic(); document.getElementById('cat-modal
 function closeAddCatModal() { document.getElementById('cat-modal').style.display = 'none'; }
 function openAddGoalModal() { triggerHaptic(); document.getElementById('goal-modal').style.display = 'flex'; }
 function closeAddGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
-function openAddDepositModal2() {} // зарезервировано
 
 function saveNewCategory() {
     const name = document.getElementById('new-cat-name').value.trim();
@@ -1465,7 +1488,7 @@ function saveNewGoal() {
     const name = document.getElementById('new-goal-name').value.trim();
     const target = Number(document.getElementById('new-goal-target').value);
     if (!name || !target) return uiAlert("Заполните название и сумму цели");
-    if (!isPro && goals.length >= 2) { openProModal('🎯 В бесплатной версии — до 2 копилок. В PRO копилок без лимита.'); return; }
+    if (!isPro && goals.length >= 2) { openProModal(`🎯 Бесплатная версия: до 2 копилок, у вас уже ${goals.length}. В PRO копилок без лимита.`); return; }
     goals.push({ id: Date.now(), name, target, current: 0 });
     saveAll();
     document.getElementById('new-goal-name').value = '';
@@ -1733,11 +1756,16 @@ function renderPartnerPlashka() {
     const show = () => {
         const b = partnerBanks[plashkaIdx % partnerBanks.length];
         plashkaIdx++;
-        box.innerHTML = `<div style="margin:12px 16px 4px; padding:10px 14px; border-radius:14px; background:linear-gradient(135deg, rgba(82,183,136,0.15), rgba(255,209,102,0.08)); border:1px solid var(--card-border); display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="window.open('${jsAttr(b.url)}','_blank')">
+        const card = document.createElement('div');
+        card.style.cssText = 'margin:12px 16px 4px; padding:10px 14px; border-radius:14px; background:linear-gradient(135deg, rgba(82,183,136,0.15), rgba(255,209,102,0.08)); border:1px solid var(--card-border); display:flex; align-items:center; gap:10px; cursor:pointer;';
+        card.innerHTML = `
             <i class="fa-solid fa-gift" style="color:var(--gold); font-size:16px;"></i>
             <div style="flex:1;"><div style="font-size:12px; font-weight:700;">${esc(b.name)}</div><div style="font-size:10px; color:var(--text-muted);">${esc(b.desc)}</div></div>
-            <span style="font-size:10px; color:var(--text-muted);">Реклама</span>
-        </div>`;
+            <span style="font-size:10px; color:var(--text-muted);">Реклама</span>`;
+        // URL — через addEventListener, а не inline-onclick: никакой инъекции в атрибуты
+        card.addEventListener('click', () => { if (b.url) window.open(b.url, '_blank'); });
+        box.innerHTML = '';
+        box.appendChild(card);
     };
     show();
     plashkaTimer = setInterval(show, 15000);
@@ -1847,6 +1875,9 @@ async function fetchCbRates() {
     } catch (e) {}
 }
 
+/* ---------- Планер бюджета: категории собираются через DOM API,
+   а не inline-onclick — пользовательский ввод никогда не попадает
+   в атрибуты/HTML-разметку (защита от хранимого XSS) ---------- */
 function renderBudgetPlanner(catTotals) {
     const container = document.getElementById('budget-list');
     container.innerHTML = '';
@@ -1858,12 +1889,14 @@ function renderBudgetPlanner(catTotals) {
         card.style.marginBottom = "14px";
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:4px;">
-                <span><i class="fa-solid ${catIcon(cat, 'expense')}" style="width:16px; color:var(--accent-sage); font-size:11px;"></i> <span onclick="cycleTag(&quot;${jsAttr(cat)}&quot;)" style="cursor:pointer;" title="нужное/желание — нажмите чтобы сменить">${esc(cat)}</span> <i class="fa-solid fa-trash" style="font-size:10px; color:var(--danger); cursor:pointer; margin-left:6px;" onclick="deleteCategory(&quot;${jsAttr(cat)}&quot;)"></i></span>
+                <span><i class="fa-solid ${catIcon(cat, 'expense')}" style="width:16px; color:var(--accent-sage); font-size:11px;"></i> <span data-cat-cycle title="нужное/желание — нажмите чтобы сменить" style="cursor:pointer;">${esc(cat)}</span> <i class="fa-solid fa-trash" data-cat-del title="Удалить категорию" style="font-size:10px; color:var(--danger); cursor:pointer; margin-left:6px;"></i></span>
                 <span class="hideable" style="font-weight:bold;">${fmt(fact)} / ${fmt(plan)} ${currentCurrency} (${pct}%)</span>
             </div>
             <div style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
                 <div style="width:${pct}%; height:100%; background:${pct > 90 ? 'var(--danger)' : 'var(--accent-sage)'}; transition: width 0.3s;"></div>
             </div>`;
+        card.querySelector('[data-cat-cycle]').addEventListener('click', () => cycleTag(cat));
+        card.querySelector('[data-cat-del]').addEventListener('click', () => deleteCategory(cat));
         container.appendChild(card);
     });
 }
@@ -1881,11 +1914,12 @@ function renderGoalsList() {
                     <div style="font-weight:bold; font-size:14px;">${esc(g.name)}</div>
                     <div class="hideable" style="font-size:12px; color:var(--text-muted);">${fmt(g.current)} / ${fmt(g.target)} ${currentCurrency}</div>
                 </div>
-                <span class="tag ${pct >= 100 ? 'green' : 'gold'}">${pct}%</span> <i class="fa-solid fa-trash" style="font-size:11px;color:var(--danger);cursor:pointer;" onclick="deleteGoal(${g.id})" title="Удалить цель"></i>
+                <span class="tag ${pct >= 100 ? 'green' : 'gold'}">${pct}%</span> <i class="fa-solid fa-trash" data-goal-del="${g.id}" title="Удалить цель" style="font-size:11px;color:var(--danger);cursor:pointer;"></i>
             </div>
             <div style="height:10px; background:rgba(255,255,255,0.08); border-radius:5px; overflow:hidden;">
                 <div style="width:${pct}%; height:100%; background:var(--gold); transition: width 0.3s;"></div>
             </div>`;
+        card.querySelector('[data-goal-del]').addEventListener('click', () => deleteGoal(g.id));
         container.appendChild(card);
     });
 }
@@ -1901,7 +1935,9 @@ function renderPartnerBanks() {
                 <div style="font-weight: bold; font-size: 13px;">${esc(bank.name)}</div>
                 <div style="font-size: 11px; color: var(--text-muted);">${esc(bank.desc)}</div>
             </div>
-            <button class="btn-small" onclick="window.open('${jsAttr(bank.url)}', '_blank')">Забрать</button>`;
+            <button class="btn-small" data-bank-open>Забрать</button>`;
+        // URL — через addEventListener: исключена инъекция через кавычки в onclick
+        card.querySelector('[data-bank-open]').addEventListener('click', () => { if (bank.url) window.open(bank.url, '_blank'); });
         container.appendChild(card);
     });
 }
@@ -2076,7 +2112,7 @@ async function familyCreate() {
         logEvent('family_create');
         if (d.inviteCode) {
             window._botUsername = d.botUsername || window._botUsername;
-            uiAlert('Семья создана! Отправьте родным ссылку-приглашение — по ней они попадут сразу в приложение, и всем подарят PRO на месяц.');
+            uiAlert('Семья создана! Отправьте родным ссылку-приглашение — по ней они попадут сразу в приложение, и всем подарят PRO на месяц. Вы получите уведомление в бота, когда кто-то вступит.');
             document.getElementById('family-status').innerHTML =
                 `Статус: <b style="color:var(--accent-sage)">вы владелец семьи</b><br>${inviteLinkHTML(d.inviteCode)}`;
         }
@@ -2093,7 +2129,7 @@ async function familyJoin(code) {
         });
         const d = await r.json();
         if (d.error === 'owner') { uiAlert('Вы владелец семьи с другими участниками — сначала попросите родных создать свою семью (иначе они потеряют общий бюджет).'); return; }
-        if (d.error === 'family_full') { openProModal('👨‍👩‍👧 В бесплатной версии — до 3 участников семьи. PRO открывает безлимит.'); return; }
+        if (d.error === 'family_full') { openProModal(`👨‍👩‍👧 Бесплатная версия: в семье не более 3 участников. PRO открывает безлимит.`); return; }
         if (d.error === 'rate') { uiAlert('Слишком много попыток. Подождите минуту.'); return; }
         if (d.ok) {
             logEvent('family_join');
@@ -2338,7 +2374,11 @@ async function quickTokenShow() {
         if (d.token) {
             const box = document.getElementById('quick-token-box');
             box.style.display = 'block';
-            box.innerHTML = `Ключ: <b>${d.token}</b> <span onclick="if(navigator.clipboard)navigator.clipboard.writeText('${d.token}');this.innerText='✓ скопировано'" style="cursor:pointer;color:var(--gold);font-size:11px;">📋</span><br><span style="color:var(--text-muted)">Вставьте его в команду по инструкции из бота (/setup). Храните как пароль.</span>`;
+            box.innerHTML = `Ключ: <b>${d.token}</b> <span data-copy-token="${jsAttr(d.token)}" style="cursor:pointer;color:var(--gold);font-size:11px;">📋</span><br><span style="color:var(--text-muted)">Вставьте его в команду по инструкции из бота (/setup). Храните как пароль.</span>`;
+            box.querySelector('[data-copy-token]').addEventListener('click', (e) => {
+                if (navigator.clipboard) navigator.clipboard.writeText(d.token);
+                e.target.innerText = '✓ скопировано';
+            });
         } else {
             uiAlert('Не удалось получить ключ.');
         }
@@ -2357,7 +2397,11 @@ async function quickTokenRevoke() {
             if (d.token) {
                 const box = document.getElementById('quick-token-box');
                 box.style.display = 'block';
-                box.innerHTML = `Новый ключ: <b>${d.token}</b> <span onclick="if(navigator.clipboard)navigator.clipboard.writeText('${d.token}');this.innerText='✓ скопировано'" style="cursor:pointer;color:var(--gold);font-size:11px;">📋</span><br><span style="color:var(--text-muted)">Обновите его в командах на устройствах.</span>`;
+                box.innerHTML = `Новый ключ: <b>${d.token}</b> <span data-copy-token="${jsAttr(d.token)}" style="cursor:pointer;color:var(--gold);font-size:11px;">📋</span><br><span style="color:var(--text-muted)">Обновите его в командах на устройствах.</span>`;
+                box.querySelector('[data-copy-token]').addEventListener('click', (e) => {
+                    if (navigator.clipboard) navigator.clipboard.writeText(d.token);
+                    e.target.innerText = '✓ скопировано';
+                });
             } else uiAlert('Не удалось перевыпустить ключ.');
         } catch (e) { uiAlert('Ошибка связи с сервером.'); }
     });
@@ -2379,7 +2423,7 @@ function inviteLinkHTML(code) {
     if (!u) return `код: <b>${code}</b>`;
     const link = `https://t.me/${u}?start=${code}`;
     return `<a href="${link}" style="color:var(--accent-light); word-break:break-all;">${link}</a>
-        <span onclick="event.preventDefault(); if(navigator.clipboard) navigator.clipboard.writeText('${link}'); this.innerText='✓ скопировано';" style="cursor:pointer; color:var(--gold); font-size:11px; white-space:nowrap;">📋 скопировать</span>`;
+        <span data-copy-link="${jsAttr(link)}" style="cursor:pointer; color:var(--gold); font-size:11px; white-space:nowrap;">📋 скопировать</span>`;
 }
 
 /* ---------- Обратная связь через бота ---------- */
@@ -2412,7 +2456,7 @@ function logEvent(name) {
     } catch (e) {}
 }
 
-/* ---------- Стартовый параметр: код семьи или вкладка ---------- */
+/* ---------- Вступление в семью по ссылке ?startapp=КОД + deep-link вкладок ---------- */
 async function handleInviteParam() {
     if (!platform.inTelegram) return;
     const p = platform.startParam;
@@ -2426,6 +2470,16 @@ async function handleInviteParam() {
         if (idx >= 0 && navs[idx]) switchTab(tab, navs[idx]);
     }
 }
+
+/* Делегированный обработчик для динамических элементов копирования */
+document.addEventListener('click', (e) => {
+    const copyEl = e.target.closest('[data-copy-link]');
+    if (copyEl) {
+        e.preventDefault();
+        if (navigator.clipboard) navigator.clipboard.writeText(copyEl.dataset.copyLink);
+        copyEl.innerText = '✓ скопировано';
+    }
+});
 
 /* ---------- Инициализация ---------- */
 (async function init() {
