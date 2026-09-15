@@ -1099,10 +1099,26 @@ function quickAddFromApp() {
     if(result){result.className='quick-result-ok';result.innerText=`✓ ${parsed.type==='income'?'+':'-'}${fmt(parsed.amount)} ${currentCurrency} · ${catEmoji(parsed.category,parsed.type)} ${parsed.category}`;}
     input.value='';
 }
-const quickEntryBtn=document.getElementById('quick-entry-btn');
-const quickEntryInput=document.getElementById('quick-entry-input');
-quickEntryBtn?.addEventListener('click',quickAddFromApp);
-quickEntryInput?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();quickAddFromApp();}});
+// Элементы быстрой записи находятся внутри dashboard, который renderUI() пересоздаёт.
+// Поэтому слушатели вешаем через делегирование на document — они не теряются после renderUI().
+if (!window.__quickEntryDelegated) {
+    window.__quickEntryDelegated = true;
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest?.('#quick-entry-btn');
+        if (btn) {
+            e.preventDefault();
+            quickAddFromApp();
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const input = e.target.closest?.('#quick-entry-input');
+        if (input) {
+            e.preventDefault();
+            quickAddFromApp();
+        }
+    });
+}
 
 /* ---------- Навигация ---------- */
 function switchTab(tabId, el) {
