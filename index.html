@@ -2375,6 +2375,9 @@ document.getElementById('currency-select').onchange = (e) => {
    ============================================================ */
 const API_URL = 'https://sage-api.ivan-xls.workers.dev';
 let cloudSaveTimer = null, cloudVersion = 0;
+let cloudReady = false;
+let cloudHydrating = true;
+let cloudSaveDeferred = false;
 
 function getStatePayload() {
     return {
@@ -2449,6 +2452,7 @@ async function cloudSaveNow(seq) {
 
 function cloudSave() {
     if (!platform.inTelegram) return;
+    if (!cloudReady || cloudHydrating) { cloudSaveDeferred = true; return; }
     cloudSaveSeq++;
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(() => cloudSaveNow(cloudSaveSeq), 1200);
@@ -2468,9 +2472,10 @@ async function cloudLoad() {
             method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData: platform.initData })
         });
-        if (!r.ok) return;
+        if (!r.ok) { console.error('[schitay] /state failed', r.status); return false; }
         const d = await r.json();
         if (d.version) cloudVersion = d.version;
+        if (d.state) cloudReady = true;
         // При первом открытии нового поколения бота сервер уже сбросил
         // старые тестовые финансовые данные. Очищаем и локальный кэш,
         // затем один раз перезагружаем приложение, чтобы дефолты создались заново.
@@ -2500,7 +2505,8 @@ async function cloudLoad() {
                 box.innerHTML = '👤 <b>Личный режим.</b><br>Вы ещё не создали семейный доступ.';
             }
         }
-    } catch (e) { /* сервер недоступен — работаем локально */ }
+    } catch (e) { console.error('[schitay] cloudLoad error', e); return false; }
+    return true;
 }
 
 function showFamilyInvite(token, botUsername) {
@@ -2981,6 +2987,8 @@ document.addEventListener('click', (e) => {
     initMonthSelector();
     migrateMonthKeys();
     autoApplyRecurring();
+    cloudHydrating = false;
+    if (cloudSaveDeferred && cloudReady) { cloudSaveDeferred = false; cloudSave(); }
     checkReminders();
     applyPrivacy();
     updatePinUI();
