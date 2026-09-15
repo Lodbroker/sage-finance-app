@@ -2398,6 +2398,9 @@ document.getElementById('currency-select').onchange = (e) => {
    ============================================================ */
 const API_URL = 'https://sage-api.ivan-xls.workers.dev';
 let cloudSaveTimer = null, cloudVersion = 0;
+let cloudSaveInFlight = false;
+let cloudSavePending = false;
+let cloudSaveGeneration = 0;
 
 function getStatePayload() {
     return {
@@ -2431,8 +2434,20 @@ function applyState(s) {
 }
 async function cloudSave() {
     if (!platform.inTelegram) return;              // не в Telegram — работаем локально
+    cloudSavePending = true;
+    const generation = ++cloudSaveGeneration;
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(async () => {
+        // Если за время debounce появились более свежие правки — этот запуск устарел.
+        if (generation !== cloudSaveGeneration) return;
+        cloudSavePending = false;
+        if (cloudSaveInFlight) {
+            // Текущий запрос уже идёт. После его завершения будет новый запуск.
+            cloudSavePending = true;
+            return;
+        }
+        cloudSaveInFlight = true;
+        const sentGeneration = generation;
         try {
             const r = await fetch(API_URL + '/sync', {
                 method: 'POST',
@@ -2440,13 +2455,41 @@ async function cloudSave() {
                 body: JSON.stringify({ initData: platform.initData, state: getStatePayload(), version: cloudVersion })
             });
             const d = await r.json().catch(() => null);
-            if (d && d.version) cloudVersion = d.version;
+
             if (d && d.conflict) {
-                uiConfirm('Данные изменил другой член семьи. Загрузить актуальную версию? Ваши последние локальные правки будут перезаписаны.', async () => {
-                    await cloudLoad(); renderUI();
-                });
+                // НИКОГДА не продолжаем отправлять старый локальный state с новой version.
+                // Иначе ответ conflict мог превратиться в последующую перезапись данных бота.
+                if (d.state) applyState(d.state);
+                if (d.version) cloudVersion = Number(d.version);
+                renderUI();
+                if (sentGeneration === cloudSaveGeneration) {
+                    uiAlert('Данные на сервере изменились. Загружена актуальная версия.');
+                } else {
+                    // Пока запрос шёл, пользователь уже сделал новые правки — после загрузки
+                    // актуальной версии дадим им отдельный чистый sync.
+                    cloudSavePending = true;
+                }
+                return;
             }
-        } catch (e) { /* офлайн — данные останутся в localStorage */ }
+
+            if (d && d.version) cloudVersion = Number(d.version);
+            if (!r.ok || !d || d.error) {
+                console.warn('[schitay] cloud sync failed', r.status, d);
+            }
+        } catch (e) {
+            console.warn('[schitay] cloud sync unavailable', e);
+        } finally {
+            cloudSaveInFlight = false;
+            // Если правки появились во время запроса или конфликт был обработан,
+            // отправляем только самое свежее состояние с актуальной version.
+            if (cloudSavePending || sentGeneration !== cloudSaveGeneration) {
+                cloudSavePending = false;
+                clearTimeout(cloudSaveTimer);
+                cloudSaveTimer = setTimeout(() => {
+                    cloudSave();
+                }, 100);
+            }
+        }
     }, 1500);
 }
 async function cloudLoad() {
