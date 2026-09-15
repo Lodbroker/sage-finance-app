@@ -149,45 +149,11 @@
         .app-page.active { display: block; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
-        .modal-content { background: var(--bg-grad-2); border-radius: 24px; width: min(100%, 420px); max-width: 420px; padding: 24px; border: 1px solid var(--card-border); max-height: 85vh; overflow-y: auto; overflow-x: hidden; }
-        .form-group { margin-bottom: 14px; min-width: 0; }
-        .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.25; }
-        .form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; width: 100%; }
-        .form-row > .form-group { min-width: 0; }
-        .form-row > .form-group .form-label { min-height: 30px; }
-        @media (max-width: 380px) {
-            .modal { padding: 10px; }
-            .modal-content { padding: 18px; border-radius: 20px; max-height: 90vh; }
-            .form-row { gap: 8px; }
-            .form-row > .form-group .form-label { min-height: 30px; }
-            .form-input, .form-select { padding: 11px 10px; }
-        }
-        .form-input, .form-select { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; display: block; padding: 12px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--card-border); color: var(--input-text); font-size: 15px; outline: none; }
-        select.form-select {
-            color: var(--input-text);
-            color-scheme: light;
-            -webkit-text-fill-color: var(--input-text);
-        }
-        select.form-select:focus {
-            color: var(--input-text);
-            -webkit-text-fill-color: var(--input-text);
-        }
-        select.form-select option,
-        select.form-select optgroup {
-            background-color: var(--option-bg) !important;
-            color: var(--text-main) !important;
-            -webkit-text-fill-color: var(--text-main) !important;
-        }
-        body[data-theme="graphite"] select.form-select,
-        body[data-theme="neon"] select.form-select,
-        body[data-theme="ocean"] select.form-select,
-        body[data-theme="system"][data-tg-scheme="dark"] select.form-select {
-            color-scheme: dark;
-        }
-        body[data-theme="light"] select.form-select,
-        body[data-theme="system"][data-tg-scheme="light"] select.form-select {
-            color-scheme: light;
-        }
+        .modal-content { background: var(--bg-grad-2); border-radius: 24px; width: 100%; max-width: 420px; padding: 24px; border: 1px solid var(--card-border); max-height: 85vh; overflow-y: auto; }
+        .form-group { margin-bottom: 14px; }
+        .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+        .form-input, .form-select { width: 100%; padding: 12px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--card-border); color: var(--input-text); font-size: 15px; outline: none; }
+        .form-select option { background-color: var(--option-bg); color: #fff; }
         .btn-submit { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--accent-sage); color: #000; font-weight: bold; font-size: 15px; cursor: pointer; }
         .btn-small { padding: 6px 12px; border-radius: 8px; border: none; background: var(--accent-sage); color: #000; font-weight: bold; font-size: 12px; cursor: pointer; white-space: nowrap; }
         .btn-danger { background: var(--danger); color: #fff; }
@@ -322,6 +288,18 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             </div>
         </div>
 
+        <div class="glass-card" id="quick-entry-card" style="background:linear-gradient(135deg, rgba(255,209,102,0.12), rgba(255,209,102,0.03)); border-color:rgba(255,209,102,0.28);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+                <div><div style="font-size:14px;font-weight:800;">⚡ Быстрая запись</div><div style="font-size:11px;color:var(--text-muted);">Напишите «350 кофе» или «зп 80000»</div></div>
+                <span class="tag gold">1 касание</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <input id="quick-entry-input" class="form-input" placeholder="Например: 450 кофе" autocomplete="off" style="padding:11px 12px;">
+                <button type="button" class="btn-small" id="quick-entry-btn" onclick="quickAddFromApp()" style="min-width:48px;font-size:16px;">➜</button>
+            </div>
+            <div id="quick-entry-result" style="font-size:11px;color:var(--accent-light);margin-top:7px;min-height:15px;"></div>
+        </div>
+
         <div class="glass-card" id="upcoming-payments-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <div style="font-size:14px;font-weight:800;">📅 Ближайшие платежи</div>
@@ -366,7 +344,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         <div class="glass-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; gap:8px;">
                 <div style="font-size: 14px; font-weight: bold;">Операции за месяц</div>
-                <input class="form-input" id="tx-search" placeholder="Поиск..." style="width:110px; padding:6px 10px; font-size:12px;" oninput="txSearchQuery=this.value.toLowerCase(); renderUI();">
+                <input class="form-input" id="tx-search" placeholder="Поиск операций..." style="width:130px; padding:6px 10px; font-size:12px;" oninput="setTxSearch(this.value);">
             </div>
             <div id="tx-list"></div>
         </div>
@@ -576,22 +554,26 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div style="font-size: 11px; color: var(--text-muted);">Ключ выдаётся в разделе «Безопасность» выше (кнопка «Получить новый ключ»).</div>
         </div>
 
-        <div class="section-title">Приглашения и семья</div>
+        <div class="section-title">Семейный доступ</div>
         <div class="glass-card">
-            <div style="font-size:13px;font-weight:700;margin-bottom:5px;">📱 Пригласить в «Считай»</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Человек получит свой обычный аккаунт и личный бюджет. Доступа к вашей семье он не получит.</div>
-            <button class="btn-small" onclick="appInviteCreate()">Создать ссылку</button>
-            <div id="app-invite-box" style="display:none;font-size:11px;margin-top:8px;word-break:break-all;"></div>
+            <div id="family-status" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Статус: проверяем подключение…</div>
+            <div id="family-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn-small" onclick="familyCreate()">Создать семью</button>
+                <button class="btn-small btn-outline" onclick="openFamilyJoinInput()">Вступить по ссылке</button>
+            </div>
+            <div id="family-invite-actions" style="display:none; margin-top:8px; gap:8px; flex-wrap:wrap;">
+                <button class="btn-small" onclick="familyInvite()">Создать приглашение</button>
+                <button class="btn-small btn-outline" onclick="appInvite()">Пригласить в Считай</button>
+            </div>
+            <div id="family-invite-link" style="display:none; margin-top:10px; font-size:11px; line-height:1.45; word-break:break-word;"></div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Новые участники не получают доступ сразу: сначала приходит заявка, а владелец подтверждает или отклоняет её в боте. Бесплатно — до 3 участников, PRO — безлимит.</div>
         </div>
 
-        <div class="glass-card" style="margin-top:10px;">
-            <div id="family-status" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Пока вы не состоите в семейном доступе.</div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn-small" onclick="familyCreate()">Создать семью</button>
-                <button class="btn-small btn-outline" onclick="familyJoin()">Ввести приглашение</button>
-            </div>
-            <div id="family-invite-box" style="display:none;margin-top:9px;font-size:11px;word-break:break-all;"></div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Только владелец может создавать приглашения. Новый участник сначала отправляет запрос, затем владелец подтверждает его в боте. Бесплатно — до 3 участников, PRO — безлимит.</div>
+        <div class="section-title">Пригласить в «Считай»</div>
+        <div class="glass-card">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:9px;">Отдельная ссылка для друзей: она не даёт доступ к вашим финансовым данным и просто открывает приложение.</div>
+            <button class="btn-submit" onclick="appInvite()">Создать ссылку-приглашение</button>
+            <div id="app-invite-link" style="display:none; margin-top:10px; font-size:11px; line-height:1.45; word-break:break-word;"></div>
         </div>
 
         <div class="section-title">Резервные копии</div>
@@ -731,12 +713,12 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Категория расхода</label>
                 <select class="form-select" id="new-rec-category"></select>
             </div>
-            <div class="form-row">
-                <div class="form-group">
+            <div style="display:flex; gap:8px;">
+                <div class="form-group" style="flex:1;">
                     <label class="form-label">Сумма</label>
                     <input type="number" class="form-input" id="new-rec-amount" placeholder="299" inputmode="decimal">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex:1;">
                     <label class="form-label">День месяца (31 = последний день)</label>
                     <input type="number" class="form-input" id="new-rec-day" placeholder="15" min="1" max="31" inputmode="numeric">
                 </div>
@@ -760,12 +742,12 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Название</label>
                 <input type="text" class="form-input" id="edit-rec-name">
             </div>
-            <div class="form-row">
-                <div class="form-group">
+            <div style="display:flex; gap:8px;">
+                <div class="form-group" style="flex:1;">
                     <label class="form-label">Сумма</label>
                     <input type="number" class="form-input" id="edit-rec-amount" inputmode="decimal">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex:1;">
                     <label class="form-label">День месяца (31 = последний день)</label>
                     <input type="number" class="form-input" id="edit-rec-day" min="1" max="31" inputmode="numeric">
                 </div>
@@ -933,6 +915,7 @@ const platform = {
     haptic(style) { try { if (style === 'success') tg?.HapticFeedback?.notificationOccurred?.('success'); else tg?.HapticFeedback?.impactOccurred?.(style || 'light'); } catch (e) {} },
     showAlert(msg) { if (tg && tg.showAlert) { try { tg.showAlert(String(msg)); return true; } catch (e) {} } window.alert(msg); return false; },
     openInvoice(link, cb) { if (tg && tg.openInvoice) { try { tg.openInvoice(link, cb); return true; } catch (e) {} } return false; },
+    openTelegramLink(link) { try { if (tg?.openTelegramLink) { tg.openTelegramLink(link); return true; } } catch (e) {} return false; },
     get biometry() { return (tg && tg.BiometricManager) || null; }
 };
 
@@ -956,6 +939,9 @@ if (tg) {
 function triggerHaptic() { try { platform.haptic(); } catch(e) {} }
 
 /* ---------- Состояние ---------- */
+let familyIsFamily = false;
+let familyRole = '';
+let familyInviteToken = '';
 let isPro      = localStorage.getItem('sage_is_pro') === 'true';
 let proUntil   = Number(localStorage.getItem('sage_pro_until')) || 0;
 if (proUntil && Date.now() > proUntil) { localStorage.removeItem('sage_pro_until'); proUntil = 0; }
@@ -966,6 +952,23 @@ let rates      = JSON.parse(localStorage.getItem('sage_rates')) || { 'USD': 91.5
 let tripMode   = localStorage.getItem('sage_trip') === '1';
 let weekLimit  = Number(localStorage.getItem('sage_weeklimit')) || 0;
 let txSearchQuery = '';
+let txVisibleCount = 50;
+let txListObserver = null;
+
+function setTxSearch(value) {
+    const next = String(value || '').trim().toLowerCase();
+    if (next !== txSearchQuery) {
+        txSearchQuery = next;
+        txVisibleCount = 50;
+    }
+    renderUI();
+}
+
+function resetTxPagination() {
+    txVisibleCount = 50;
+    if (txListObserver) { try { txListObserver.disconnect(); } catch (e) {} txListObserver = null; }
+}
+
 let streakMap  = JSON.parse(localStorage.getItem('sage_streak')) || {};
 let categoryIcons = JSON.parse(localStorage.getItem('sage_cat_icons')) || {
     'Еда и продукты':'🛒','Жилье и КУ':'🏠','Транспорт':'🚌','Развлечения':'🎬','Авто и Бензин':'🚗','Питомцы':'🐾','Подписки':'📺',
@@ -986,9 +989,10 @@ let selectedMonth = monthKeyOf(new Date().getFullYear(), new Date().getMonth());
 const allMonths = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const MONTH_NUM = { 'Январь':0,'Февраль':1,'Март':2,'Апрель':3,'Май':4,'Июнь':5,'Июль':6,'Август':7,'Сентябрь':8,'Октябрь':9,'Ноябрь':10,'Декабрь':11 };
 
-// CPA-предложения загружаются с сервера через /state.
-// Тестовые банковские URL намеренно не используются.
-let partnerBanks = [];
+let partnerBanks = [
+    { id: 1, name: 'Т-Банк (Black)', desc: 'Кэшбэк до 30% + 1000 ₽ бонуса', url: 'https://tbank.ru' },
+    { id: 2, name: 'Альфа-Карта', desc: 'Бесплатное обслуживание навсегда', url: 'https://alfabank.ru' }
+];
 
 let expenseCategories = JSON.parse(localStorage.getItem('sage_exp_cats')) || {
     'Еда и продукты': 25000, 'Жилье и КУ': 20000, 'Транспорт': 10000,
@@ -1076,18 +1080,6 @@ function saveAll() {
     try { cloudSave(); } catch (e) {}
 }
 
-function saveAllLocalOnly() {
-    localStorage.setItem('sage_txs', JSON.stringify(transactions));
-    localStorage.setItem('sage_goals', JSON.stringify(goals));
-    localStorage.setItem('sage_deposits', JSON.stringify(deposits));
-    localStorage.setItem('sage_debts', JSON.stringify(debts));
-    localStorage.setItem('sage_rec', JSON.stringify(recurring));
-    localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
-    localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories));
-    localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons));
-    localStorage.setItem('sage_rates', JSON.stringify(rates));
-}
-
 /* ---------- Месячный селектор ---------- */
 function initMonthSelector() {
     const sel = document.getElementById('month-selector');
@@ -1102,9 +1094,10 @@ function initMonthSelector() {
         });
     }
     selectedMonth = sel.value;
+    resetTxPagination();
 }
 document.getElementById('month-selector').onchange = (e) => {
-    selectedMonth = e.target.value; triggerHaptic(); renderUI();
+    selectedMonth = e.target.value; resetTxPagination(); triggerHaptic(); renderUI();
 };
 
 /* ---------- Быстрая запись внутри Mini App ---------- */
@@ -1121,6 +1114,50 @@ function parseQuickEntry(text) {
     const category=isIncome ? (incomeCategories.find(c=>/зарплат/i.test(c)) || incomeCategories[0] || 'Зарплата') : guessCategory(label, {expenseCategories});
     return {type, amount, category};
 }
+async function quickAddFromApp() {
+    const input=document.getElementById('quick-entry-input'); const result=document.getElementById('quick-entry-result');
+    const text=String(input?.value||'').trim();
+    if(!text) { if(result){result.className='quick-result-error';result.innerText='Введите, например: 450 кофе';} return; }
+    const parsed=parseQuickEntry(text);
+    if(!parsed) { if(result){result.className='quick-result-error';result.innerText='Не понял запись. Пример: «350 кофе» или «зп 80000»';} return; }
+    if(!platform.inTelegram) {
+        const ts=Date.now(); const base=convertToBase(parsed.amount,currentCurrency);
+        transactions.unshift({id:ts,type:parsed.type,category:parsed.category,amount:parsed.amount,currency:currentCurrency,amountBase:base,month:monthNameOf(selectedMonth),mk:selectedMonth,date:'Быстрая запись',ts});
+        if(parsed.type==='income') applyAutoSavings(base);
+        saveAll(); renderUI(); input.value='';
+        if(result){result.className='quick-result-ok';result.innerText=`✓ ${parsed.type==='income'?'+':'-'}${fmt(parsed.amount)} ${currentCurrency} · ${catEmoji(parsed.category,parsed.type)} ${parsed.category}`;}
+        return;
+    }
+    try {
+        if(result){result.className='';result.innerText='Сохраняю…';}
+        const clientId = String(Date.now()) + '-' + Math.random().toString(36).slice(2,8);
+        const r = await fetch(API_URL + '/app-quickadd', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({initData:platform.initData,text,clientId})
+        });
+        const d = await r.json().catch(()=>null);
+        if(!r.ok || !d || !d.ok) throw new Error((d && d.error) || 'save');
+        await cloudLoad();
+        renderUI();
+        input.value='';
+        if(result){result.className='quick-result-ok';result.innerText=`✓ ${parsed.type==='income'?'+':'-'}${fmt(parsed.amount)} ${currentCurrency} · ${catEmoji(parsed.category,parsed.type)} ${parsed.category}`;}
+        try { logEvent('tx_add'); } catch(e) {}
+    } catch(e) {
+        if(result){result.className='quick-result-error';result.innerText='Не удалось сохранить. Попробуйте ещё раз.';}
+    }
+}
+const quickEntryBtn=document.getElementById('quick-entry-btn');
+const quickEntryInput=document.getElementById('quick-entry-input');
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('#quick-entry-btn');
+    if (btn) { e.preventDefault(); quickAddFromApp(); }
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const input = e.target.closest('#quick-entry-input');
+    if (input) { e.preventDefault(); quickAddFromApp(); }
+});
+
 /* ---------- Навигация ---------- */
 function switchTab(tabId, el) {
     triggerHaptic();
@@ -1312,12 +1349,10 @@ function getMonthKey() {
 function autoApplyRecurring() {
     // Автоматически заносим постоянные платежи в текущий реальный месяц,
     // если день платежа уже наступил и платёж ещё не занесён.
-    // Важно: если ничего нового не добавили, НЕ делаем saveAll()/sync.
     const applied = JSON.parse(localStorage.getItem('sage_rec_applied')) || {};
     const key = getMonthKey();
     const now = new Date();
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    let changed = false;
     recurring.forEach(r => {
         const effDay = r.day === 31 ? lastDay : Math.min(r.day, lastDay); // 31 = «последний день месяца»
         if (now.getDate() >= effDay && !(applied[key] || []).includes(r.id)) {
@@ -1328,11 +1363,10 @@ function autoApplyRecurring() {
             });
             applied[key] = applied[key] || [];
             applied[key].push(r.id);
-            changed = true;
         }
     });
     localStorage.setItem('sage_rec_applied', JSON.stringify(applied));
-    if (changed) saveAll();
+    saveAll();
 }
 function isRecurringAppliedInSelected(r) {
     // Отображаем статус платежа в выбранном в селекторе месяце
@@ -1868,37 +1902,26 @@ function renderDashboardPlanner(income, expense, savings) {
     upcoming.forEach(r=>{const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border);';row.innerHTML=`<div><div style="font-size:12px;font-weight:700;">${esc(r.name)}</div><div style="font-size:10px;color:var(--text-muted);">${r._date.getDate()} ${monthNameOf(selectedMonth).slice(0,3)}</div></div><div class="hideable" style="font-size:12px;font-weight:800;">${fmt(r.amount)} ${currentCurrency}</div>`;box.appendChild(row);});
 }
 
-function renderUI() {
-    if (isPro) {
-        document.body.classList.add('is-pro');
-        document.getElementById('yearly-lock-overlay').style.display = 'none';
-        document.getElementById('pro-status-tag').style.display = 'inline-block';
-        document.getElementById('pro-cta-btn').innerText = 'PRO активирован ✓';
-        document.getElementById('pro-cta-btn').disabled = true;
-        document.getElementById('pro-cta-btn').style.opacity = 0.6;
-    } else {
-        document.body.classList.remove('is-pro');
-        document.getElementById('yearly-lock-overlay').style.display = 'flex';
-        document.getElementById('pro-status-tag').style.display = 'none';
-        document.getElementById('pro-cta-btn').innerText = 'Активировать PRO';
-        document.getElementById('pro-cta-btn').disabled = false;
-        document.getElementById('pro-cta-btn').style.opacity = 1;
-    }
-
-    const monthTxs = transactions.filter(t => t.mk === selectedMonth && (!txSearchQuery || (t.category + ' ' + t.date).toLowerCase().includes(txSearchQuery)));
-    let income = 0, expense = 0, savings = 0;
-    const catTotals = {};
-
+function renderTransactionsList(filteredTxs) {
     const txListEl = document.getElementById('tx-list');
+    if (!txListEl) return;
+    if (txListObserver) { try { txListObserver.disconnect(); } catch (e) {} txListObserver = null; }
     txListEl.innerHTML = '';
 
-    monthTxs.forEach(tx => {
-        const base = tx.amountBase !== undefined ? tx.amountBase : convertToBase(tx.amount, tx.currency || '₽');
-        if (tx.type === 'income') income += base;
-        else if (tx.type === 'expense') {
-            expense += base;
-            if (!tx.trip) catTotals[tx.category] = (catTotals[tx.category] || 0) + base;
-        } else if (tx.type === 'savings') savings += base;
+    const isSearch = !!txSearchQuery;
+    const total = filteredTxs.length;
+    const shown = filteredTxs.slice(0, txVisibleCount);
+    let previousMonth = null;
+
+    shown.forEach(tx => {
+        // При поиске по всей истории отделяем операции разных месяцев визуально.
+        if (isSearch && tx.mk && tx.mk !== previousMonth) {
+            const monthTitle = document.createElement('div');
+            monthTitle.style.cssText = 'font-size:10px;font-weight:800;color:var(--text-muted);padding:10px 2px 5px;text-transform:uppercase;letter-spacing:.3px;';
+            monthTitle.innerText = `${monthNameOf(tx.mk)} ${tx.mk.slice(0,4)}`;
+            txListEl.appendChild(monthTitle);
+            previousMonth = tx.mk;
+        }
 
         const item = document.createElement('div');
         item.className = 'tx-item';
@@ -1923,16 +1946,94 @@ function renderUI() {
         item.addEventListener('touchstart', startPress);
         item.addEventListener('touchend', () => clearTimeout(pressTimer));
         item.addEventListener('touchmove', () => clearTimeout(pressTimer));
-        // мышиный аналог long-press — иначе на десктопе удалить операцию невозможно
         item.addEventListener('mousedown', startPress);
         item.addEventListener('mouseup', () => clearTimeout(pressTimer));
         item.addEventListener('mouseleave', () => clearTimeout(pressTimer));
         item.addEventListener('click', () => { if (longPressFired) { longPressFired = false; return; } openEditTx(tx.id); });
     });
 
-    if (!monthTxs.length) {
-        txListEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Операций нет — нажмите «+», чтобы добавить. <br>Зажмите операцию (или удерживайте мышью), чтобы удалить.</div>';
+    if (!shown.length) {
+        txListEl.innerHTML = isSearch
+            ? '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Ничего не найдено в истории операций.</div>'
+            : '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Операций нет — нажмите «+», чтобы добавить. <br>Зажмите операцию (или удерживайте мышью), чтобы удалить.</div>';
+        return;
     }
+
+    if (total > txVisibleCount) {
+        const more = document.createElement('div');
+        more.id = 'tx-load-more';
+        more.style.cssText = 'height:38px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);';
+        more.innerText = `Показано ${shown.length} из ${total}`;
+        txListEl.appendChild(more);
+
+        if ('IntersectionObserver' in window) {
+            txListObserver = new IntersectionObserver(entries => {
+                if (!entries[0].isIntersecting) return;
+                txVisibleCount += 50;
+                renderTransactionsList(filteredTxs);
+            }, { rootMargin: '250px' });
+            txListObserver.observe(more);
+        } else {
+            more.style.cursor = 'pointer';
+            more.innerText = `Показать ещё · ${shown.length} из ${total}`;
+            more.onclick = () => { txVisibleCount += 50; renderTransactionsList(filteredTxs); };
+        }
+    } else if (isSearch && total > 0) {
+        const info = document.createElement('div');
+        info.style.cssText = 'font-size:10px;color:var(--text-muted);text-align:center;padding:8px 0 2px;';
+        info.innerText = `Найдено: ${total}`;
+        txListEl.appendChild(info);
+    }
+}
+
+function renderUI() {
+    if (isPro) {
+        document.body.classList.add('is-pro');
+        document.getElementById('yearly-lock-overlay').style.display = 'none';
+        document.getElementById('pro-status-tag').style.display = 'inline-block';
+        document.getElementById('pro-cta-btn').innerText = 'PRO активирован ✓';
+        document.getElementById('pro-cta-btn').disabled = true;
+        document.getElementById('pro-cta-btn').style.opacity = 0.6;
+    } else {
+        document.body.classList.remove('is-pro');
+        document.getElementById('yearly-lock-overlay').style.display = 'flex';
+        document.getElementById('pro-status-tag').style.display = 'none';
+        document.getElementById('pro-cta-btn').innerText = 'Активировать PRO';
+        document.getElementById('pro-cta-btn').disabled = false;
+        document.getElementById('pro-cta-btn').style.opacity = 1;
+    }
+
+    // Итоги всегда считаются по выбранному месяцу, независимо от активного поиска.
+    const monthTxs = transactions.filter(t => t.mk === selectedMonth);
+    let income = 0, expense = 0, savings = 0;
+    const catTotals = {};
+
+    monthTxs.forEach(tx => {
+        const base = tx.amountBase !== undefined ? tx.amountBase : convertToBase(tx.amount, tx.currency || '₽');
+        if (tx.type === 'income') income += base;
+        else if (tx.type === 'expense') {
+            expense += base;
+            if (!tx.trip) catTotals[tx.category] = (catTotals[tx.category] || 0) + base;
+        } else if (tx.type === 'savings') savings += base;
+    });
+
+    // Без поиска показываем операции выбранного месяца. При поиске ищем по всей истории,
+    // включая предыдущие месяцы. Это позволяет найти, например, старую покупку по категории.
+    let visibleTxs = monthTxs;
+    if (txSearchQuery) {
+        const q = txSearchQuery;
+        visibleTxs = transactions.filter(t => {
+            const month = t.mk || '';
+            const monthLabel = month ? `${monthNameOf(month)} ${month.slice(0,4)}` : '';
+            const amount = String(t.amount ?? '');
+            const haystack = [t.category, t.date, t.month, month, monthLabel, amount, t.currency, t.type === 'income' ? 'доход' : (t.type === 'savings' ? 'накопление' : 'расход')]
+                .filter(Boolean).join(' ').toLowerCase();
+            return haystack.includes(q);
+        });
+        visibleTxs = visibleTxs.slice().sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
+    }
+
+    renderTransactionsList(visibleTxs);
 
     document.getElementById('total-income').innerText = `${fmt(income)} ${currentCurrency}`;
     document.getElementById('total-expense').innerText = `${fmt(expense)} ${currentCurrency}`;
@@ -2100,7 +2201,6 @@ function renderPartnerPlashka() {
     if (!box) return;
     clearInterval(plashkaTimer);
     if (isPro) { box.innerHTML = ''; return; }
-    if (!partnerBanks.length) { box.innerHTML = ''; return; }
     const show = () => {
         const b = partnerBanks[plashkaIdx % partnerBanks.length];
         plashkaIdx++;
@@ -2300,32 +2400,22 @@ function renderChart(catTotals) {
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
-    // Chart.js с legend: right смещает кольцо. arc.x/arc.y заданы в координатах canvas,
-    // поэтому переводим их в реальные CSS-пиксели контейнера (важно для DPR/масштабирования Telegram).
+
+    // Центрируем сумму по фактическому центру кольца. При legend: right
+    // Chart.js сдвигает кольцо влево относительно canvas.
     const positionChartTotal = () => {
         const total = document.getElementById('chart-total');
-        const canvas = document.getElementById('expenseChart');
         const meta = chartInstance && chartInstance.getDatasetMeta(0);
         const arc = meta && meta.data && meta.data[0];
-        if (!total || !canvas || !arc || !canvas.clientWidth || !canvas.clientHeight) return;
-        const canvasRect = canvas.getBoundingClientRect();
-        const wrap = canvas.parentElement;
-        const wrapRect = wrap.getBoundingClientRect();
-        // Chart.js уже отдаёт arc.x/arc.y в CSS-координатах.
-        // Не умножаем их повторно на clientWidth/canvas.width — на телефонах
-        // canvas имеет увеличенный DPR, из-за чего подпись уезжала влево.
-        const x = (canvasRect.left - wrapRect.left) + arc.x;
-        const y = (canvasRect.top - wrapRect.top) + arc.y;
+        if (!total || !arc) return;
         total.style.inset = 'auto';
-        total.style.left = x + 'px';
-        total.style.top = y + 'px';
+        total.style.left = arc.x + 'px';
+        total.style.top = arc.y + 'px';
         total.style.width = 'max-content';
         total.style.transform = 'translate(-50%, -50%)';
     };
     positionChartTotal();
     requestAnimationFrame(positionChartTotal);
-    setTimeout(positionChartTotal, 50);
-
     const hasData = Object.keys(catTotals).length > 0;
     const totalSum = hasData ? Object.values(catTotals).reduce((a, b) => a + b, 0) : 0;
     const sumEl = document.getElementById('chart-total-sum');
@@ -2409,9 +2499,9 @@ document.getElementById('currency-select').onchange = (e) => {
    ============================================================ */
 const API_URL = 'https://sage-api.ivan-xls.workers.dev';
 let cloudSaveTimer = null, cloudVersion = 0;
-let cloudReady = false;
-let cloudHydrating = true;
-let cloudSaveDeferred = false;
+let cloudSaveInFlight = false;
+let cloudSavePending = false;
+let cloudSaveGeneration = 0;
 
 function getStatePayload() {
     return {
@@ -2443,176 +2533,244 @@ function applyState(s) {
         localStorage.setItem('sage_is_pro', isPro ? 'true' : 'false');
     }
 }
-let cloudSaveRunning = false;
-let cloudSavePending = false;
-let cloudSaveSeq = 0;
-
-async function cloudSaveNow(seq) {
-    if (!platform.inTelegram) return;
-    if (cloudSaveRunning) { cloudSavePending = true; return; }
-    cloudSaveRunning = true;
-    try {
-        const payload = getStatePayload();
-        const versionAtStart = cloudVersion;
-        const r = await fetch(API_URL + '/sync', {
-            method: 'POST',
-            cache: 'no-store',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ initData: platform.initData, state: payload, version: versionAtStart })
-        });
-        const d = await r.json().catch(() => null);
-        if (d && d.conflict) {
-            // Никогда не продолжаем отправлять старое локальное состояние с новой version.
-            // Сначала принимаем авторитетное состояние сервера.
-            if (d.state) applyState(d.state);
-            if (d.version) cloudVersion = d.version;
-            saveAllLocalOnly();
-            renderUI();
-        } else if (d && d.version) {
-            cloudVersion = d.version;
-        } else if (!r.ok) {
-            console.error('[schitay] /sync failed', r.status, d);
-        }
-    } catch (e) {
-        console.error('[schitay] /sync error', e);
-    } finally {
-        cloudSaveRunning = false;
-        if (cloudSavePending || seq !== cloudSaveSeq) {
-            cloudSavePending = false;
-            setTimeout(() => cloudSaveNow(cloudSaveSeq), 0);
-        }
-    }
-}
-
-function cloudSave() {
-    if (!platform.inTelegram) return;
-    if (!cloudReady || cloudHydrating) { cloudSaveDeferred = true; return; }
-    cloudSaveSeq++;
+async function cloudSave() {
+    if (!platform.inTelegram) return;              // не в Telegram — работаем локально
+    cloudSavePending = true;
+    const generation = ++cloudSaveGeneration;
     clearTimeout(cloudSaveTimer);
-    cloudSaveTimer = setTimeout(() => cloudSaveNow(cloudSaveSeq), 1200);
-}
-function clearFirstLaunchFinancialData() {
-    [
-        'sage_txs','sage_goals','sage_deposits','sage_debts','sage_rec',
-        'sage_exp_cats','sage_inc_cats','sage_cat_icons','sage_rates',
-        'sage_currency','sage_rec_applied','sage_onboarded','sage_is_pro','sage_pro_until'
-    ].forEach(k => localStorage.removeItem(k));
-}
+    cloudSaveTimer = setTimeout(async () => {
+        // Если за время debounce появились более свежие правки — этот запуск устарел.
+        if (generation !== cloudSaveGeneration) return;
+        cloudSavePending = false;
+        if (cloudSaveInFlight) {
+            // Текущий запрос уже идёт. После его завершения будет новый запуск.
+            cloudSavePending = true;
+            return;
+        }
+        cloudSaveInFlight = true;
+        const sentGeneration = generation;
+        try {
+            const r = await fetch(API_URL + '/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: platform.initData, state: getStatePayload(), version: cloudVersion })
+            });
+            const d = await r.json().catch(() => null);
 
+            if (d && d.conflict) {
+                // НИКОГДА не продолжаем отправлять старый локальный state с новой version.
+                // Иначе ответ conflict мог превратиться в последующую перезапись данных бота.
+                if (d.state) applyState(d.state);
+                if (d.version) cloudVersion = Number(d.version);
+                renderUI();
+                if (sentGeneration === cloudSaveGeneration) {
+                    uiAlert('Данные на сервере изменились. Загружена актуальная версия.');
+                } else {
+                    // Пока запрос шёл, пользователь уже сделал новые правки — после загрузки
+                    // актуальной версии дадим им отдельный чистый sync.
+                    cloudSavePending = true;
+                }
+                return;
+            }
+
+            if (d && d.version) cloudVersion = Number(d.version);
+            if (!r.ok || !d || d.error) {
+                console.warn('[schitay] cloud sync failed', r.status, d);
+            }
+        } catch (e) {
+            console.warn('[schitay] cloud sync unavailable', e);
+        } finally {
+            cloudSaveInFlight = false;
+            // Если правки появились во время запроса или конфликт был обработан,
+            // отправляем только самое свежее состояние с актуальной version.
+            if (cloudSavePending || sentGeneration !== cloudSaveGeneration) {
+                cloudSavePending = false;
+                clearTimeout(cloudSaveTimer);
+                cloudSaveTimer = setTimeout(() => {
+                    cloudSave();
+                }, 100);
+            }
+        }
+    }, 1500);
+}
 async function cloudLoad() {
     if (!platform.inTelegram) return;
     try {
         const r = await fetch(API_URL + '/state', {
-            method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData: platform.initData })
         });
-        if (!r.ok) { console.error('[schitay] /state failed', r.status); return false; }
+        if (!r.ok) return;
         const d = await r.json();
-        if (d.version) cloudVersion = d.version;
-        if (d.state) cloudReady = true;
-        // При первом открытии нового поколения бота сервер уже сбросил
-        // старые тестовые финансовые данные. Очищаем и локальный кэш,
-        // затем один раз перезагружаем приложение, чтобы дефолты создались заново.
-        if (d.dataReset) {
-            clearFirstLaunchFinancialData();
-            location.reload();
-            return;
-        }
+        if (d.version) cloudVersion = Number(d.version);
         if (d.state) applyState(d.state);
-        if (Array.isArray(d.partners)) {
-            partnerBanks = d.partners.filter(b => b && /^https?:\/\/[^\s"'<>`\\]{1,500}$/.test(String(b.url || ''))).map(b => ({
-                name: String(b.name || '').slice(0, 100),
-                desc: String(b.desc || '').slice(0, 200),
-                url: String(b.url).slice(0, 500)
-            }));
-        }
         if (d.botUsername) window._botUsername = d.botUsername;
-        window._isFamily = !!d.isFamily;
-        window._familyRole = d.role || null;
-        const box = document.getElementById('family-status');
-        if (box) {
-            if (d.isFamily && d.role === 'owner') {
-                box.innerHTML = '👑 <b>Вы владелец семейного доступа.</b><br>Создавайте приглашения — новые участники попадут в семью только после вашего подтверждения.';
-            } else if (d.isFamily) {
-                box.innerHTML = '👤 <b>Вы участник семьи.</b><br>Создавать приглашения и добавлять новых людей может только владелец.';
-            } else {
-                box.innerHTML = '👤 <b>Личный режим.</b><br>Вы ещё не создали семейный доступ.';
-            }
-        }
-    } catch (e) { console.error('[schitay] cloudLoad error', e); return false; }
-    return true;
+        if (typeof d.isFamily === 'boolean') familyIsFamily = d.isFamily;
+        if (d.role) familyRole = d.role;
+        renderFamilyStatus();
+    } catch (e) {
+        /* сервер недоступен — работаем локально */
+    }
 }
 
-function showFamilyInvite(token, botUsername) {
-    if (!token || !botUsername) return;
-    const link = `https://t.me/${botUsername}?startapp=fi_${token}`;
-    const box = document.getElementById('family-invite-box');
-    if (!box) return;
-    box.style.display = 'block';
-    box.innerHTML = `<div style="margin-bottom:5px;color:var(--text-muted);">Приглашение действует 7 дней и используется один раз.</div><a href="${link}" style="color:var(--accent-light);word-break:break-all;">${link}</a> <span data-copy-link="${jsAttr(link)}" style="cursor:pointer;color:var(--gold);white-space:nowrap;">📋 скопировать</span>`;
+function familyLink(token) {
+    const u = window._botUsername;
+    if (!u || !token) return '';
+    return `https://t.me/${u}?startapp=fi_${encodeURIComponent(token)}`;
+}
+
+function appLink(token) {
+    const u = window._botUsername;
+    if (!u || !token) return '';
+    return `https://t.me/${u}?startapp=app_${encodeURIComponent(token)}`;
+}
+
+function renderShareLink(containerId, link, text) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!link) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+    }
+    const safe = esc(link);
+    el.style.display = 'block';
+    el.innerHTML = `<div style="margin-bottom:6px;color:var(--text-muted);">${esc(text)}</div>` +
+        `<a href="${jsAttr(link)}" style="color:var(--accent-light);word-break:break-all;">${safe}</a>` +
+        `<div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;">` +
+        `<button type="button" class="btn-small" data-copy-link="${jsAttr(link)}">📋 Скопировать</button>` +
+        `<button type="button" class="btn-small btn-outline" data-share-link="${jsAttr(link)}">↗ Поделиться</button>` +
+        `</div>`;
+}
+
+function renderFamilyStatus() {
+    const status = document.getElementById('family-status');
+    const inviteActions = document.getElementById('family-invite-actions');
+    const actions = document.getElementById('family-actions');
+    if (!status) return;
+
+    if (!platform.inTelegram) {
+        status.innerHTML = 'Семейный доступ работает внутри Telegram.';
+        if (inviteActions) inviteActions.style.display = 'none';
+        return;
+    }
+
+    if (familyIsFamily && familyRole === 'owner') {
+        status.innerHTML = '<b style="color:var(--accent-sage)">Вы владелец семьи</b><br><span style="color:var(--text-muted)">Новые участники подключаются только после вашего подтверждения.</span>';
+        if (inviteActions) inviteActions.style.display = 'flex';
+        if (actions) actions.style.display = 'none';
+        return;
+    }
+    if (familyIsFamily && familyRole === 'member') {
+        status.innerHTML = '<b style="color:var(--accent-sage)">Вы участник семьи</b><br><span style="color:var(--text-muted)">Данные общие. Изменения и новые операции синхронизируются с семьёй.</span>';
+        if (inviteActions) inviteActions.style.display = 'none';
+        if (actions) actions.style.display = 'none';
+        return;
+    }
+
+    status.innerHTML = '<b>Личный режим</b><br><span style="color:var(--text-muted)">Вы ещё не подключены к семейному бюджету.</span>';
+    if (inviteActions) inviteActions.style.display = 'none';
+    if (actions) actions.style.display = 'flex';
 }
 
 async function familyCreate() {
     if (!platform.inTelegram) return uiAlert('Семейный доступ работает только внутри Telegram (Mini App).');
     try {
-        const r = await fetch(API_URL + '/family', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData,action:'create'}) });
-        const d = await r.json();
-        if (d.error === 'owner_only') return uiAlert('Только владелец может управлять семейным доступом.');
-        if (d.already) { await familyInviteCreate(); return; }
-        if (!d.ok) return uiAlert('Не удалось создать семейный доступ.');
-        window._isFamily = true; window._familyRole = 'owner';
+        const r = await fetch(API_URL + '/family', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: platform.initData, action: 'create' })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.error) {
+            if (d.error === 'owner_only') return uiAlert('Только владелец может управлять семейным доступом.');
+            return uiAlert('Не удалось создать семью. Попробуйте ещё раз.');
+        }
+        familyIsFamily = true;
+        familyRole = 'owner';
         logEvent('family_create');
+        if (d.inviteToken) familyInviteToken = d.inviteToken;
         await cloudLoad();
-        uiAlert('Семейный доступ создан. Теперь создайте приглашение и отправьте его близкому человеку.');
-        if (d.inviteToken) showFamilyInvite(d.inviteToken, d.botUsername || window._botUsername);
-        renderUI();
-    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
-}
-
-async function familyInviteCreate() {
-    if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
-    try {
-        const r = await fetch(API_URL + '/family', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData,action:'invite'}) });
-        const d = await r.json();
-        if (d.error === 'owner_only') return uiAlert('Только владелец семьи может создавать приглашения.');
-        if (d.error === 'no_family') return uiAlert('Сначала создайте семейный доступ.');
-        if (!d.ok) return uiAlert('Не удалось создать приглашение.');
-        showFamilyInvite(d.inviteToken, d.botUsername || window._botUsername);
-    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
-}
-
-async function familyJoin(token) {
-    if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
-    if (!token) {
-        openInputModal('Введите приглашение в семью', '', (v) => familyJoin(v));
-        return;
+        if (familyInviteToken) {
+            const link = familyLink(familyInviteToken);
+            renderShareLink('family-invite-link', link, 'Ссылка действует 7 дней и рассчитана на одного участника.');
+        }
+        renderFamilyStatus();
+        uiAlert('Семья создана. Теперь вы можете создать ссылку-приглашение. Вступление нового участника будет подтверждаться вами в боте.');
+    } catch (e) {
+        uiAlert('Не удалось связаться с сервером. Проверьте API_URL в файле index.html');
     }
-    token = String(token).trim();
-    if (token.startsWith('fi_')) token = token.slice(3);
-    if (!token) return;
-    try {
-        const r = await fetch(API_URL + '/family', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData,action:'request_join',token}) });
-        const d = await r.json();
-        if (d.error === 'owner_has_family') return uiAlert('Вы владелец семьи с другими участниками. Сначала завершите текущую семейную группу.');
-        if (d.error === 'family_full') return uiAlert('В семье уже 3 участника. PRO открывает безлимит.');
-        if (d.error === 'already_member') return uiAlert('Вы уже состоите в этой семье.');
-        if (d.error === 'invite_expired' || d.error === 'invite_not_found') return uiAlert('Приглашение недействительно или уже использовано.');
-        if (d.ok && d.pending) { uiAlert('Запрос отправлен владельцу. После подтверждения вы получите уведомление в боте.'); return; }
-        uiAlert('Не удалось отправить запрос.');
-    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
 }
 
-async function appInviteCreate() {
-    if (!platform.inTelegram) return uiAlert('Приглашения работают внутри Telegram.');
+async function familyInvite() {
+    if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
+    if (familyRole !== 'owner') return uiAlert('Создать приглашение может только владелец семьи.');
     try {
-        const r = await fetch(API_URL + '/app-invite', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData,action:'create'}) });
-        const d = await r.json();
-        if (!d.ok) return uiAlert('Не удалось создать ссылку.');
-        const link = `https://t.me/${d.botUsername}?startapp=app_${d.token}`;
-        const box = document.getElementById('app-invite-box');
-        box.style.display='block';
-        box.innerHTML = `<a href="${link}" style="color:var(--accent-light);word-break:break-all;">${link}</a> <span data-copy-link="${jsAttr(link)}" style="cursor:pointer;color:var(--gold);white-space:nowrap;">📋 скопировать</span>`;
-    } catch(e) { uiAlert('Ошибка связи с сервером.'); }
+        const r = await fetch(API_URL + '/family', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: platform.initData, action: 'invite' })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.ok || !d.inviteToken) {
+            if (d.error === 'family_full') return openProModal('👨‍👩‍👧 Бесплатная версия: в семье не более 3 участников. PRO открывает безлимит.');
+            return uiAlert('Не удалось создать приглашение. Попробуйте ещё раз.');
+        }
+        familyInviteToken = d.inviteToken;
+        if (d.botUsername) window._botUsername = d.botUsername;
+        renderShareLink('family-invite-link', familyLink(familyInviteToken), 'Ссылка действует 7 дней и позволяет отправить одну заявку на вступление.');
+        uiAlert('Ссылка готова. После перехода человек отправит вам заявку, а доступ появится только после вашего подтверждения в боте.');
+    } catch (e) {
+        uiAlert('Ошибка связи с сервером.');
+    }
+}
+
+function openFamilyJoinInput() {
+    openInputModal('Вставьте ссылку-приглашение в семью', '', (v) => {
+        const value = String(v || '').trim();
+        const m = value.match(/(?:startapp=|fi_)([A-Za-z0-9_-]{20,100})/i);
+        if (!m) return uiAlert('Не удалось найти токен приглашения. Используйте новую ссылку из раздела семейного доступа.');
+        familyRequestJoin(m[1]);
+    });
+}
+
+async function familyRequestJoin(token) {
+    if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
+    token = String(token || '').trim();
+    if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return uiAlert('Некорректная ссылка-приглашение.');
+    try {
+        const r = await fetch(API_URL + '/family', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: platform.initData, action: 'request_join', token })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (d.error === 'family_full') return openProModal('👨‍👩‍👧 Бесплатная версия: в семье не более 3 участников. PRO открывает безлимит.');
+        if (d.error === 'already_member') return uiAlert('Вы уже участник этой семьи.');
+        if (d.error === 'owner_has_family') return uiAlert('Сначала завершите текущую семейную конфигурацию, затем присоединяйтесь к другой семье.');
+        if (d.error === 'invite_expired' || d.error === 'invite_not_found') return uiAlert('Ссылка-приглашение недействительна или уже использована. Попросите владельца создать новую.');
+        if (!r.ok || !d.ok) return uiAlert('Не удалось отправить заявку. Попробуйте ещё раз.');
+        uiAlert('Заявка отправлена владельцу. Доступ появится после его подтверждения в боте.');
+        renderFamilyStatus();
+    } catch (e) {
+        uiAlert('Ошибка связи с сервером.');
+    }
+}
+
+async function appInvite() {
+    if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
+    try {
+        const r = await fetch(API_URL + '/app-invite', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: platform.initData, action: 'create' })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.ok || !d.token) return uiAlert('Не удалось создать ссылку. Попробуйте ещё раз.');
+        if (d.botUsername) window._botUsername = d.botUsername;
+        const link = appLink(d.token);
+        renderShareLink('app-invite-link', link, 'Эта ссылка не даёт доступ к вашим финансам — она только открывает «Считай».');
+        uiAlert('Ссылка готова. Её можно отправить другу.');
+    } catch (e) {
+        uiAlert('Ошибка связи с сервером.');
+    }
 }
 
 /* ---------- Инсайты месяца, недельный лимит, стрики ---------- */
@@ -2928,9 +3086,9 @@ document.getElementById('input-modal-field').addEventListener('keydown', (e) => 
 
 function inviteLinkHTML(code) {
     const u = window._botUsername;
-    if (!u) return `код: <b>${code}</b>`;
-    const link = `https://t.me/${u}?start=${code}`;
-    return `<a href="${link}" style="color:var(--accent-light); word-break:break-all;">${link}</a>
+    if (!u) return `код: <b>${esc(code)}</b>`;
+    const link = `https://t.me/${u}?startapp=fi_${encodeURIComponent(code)}`;
+    return `<a href="${jsAttr(link)}" style="color:var(--accent-light); word-break:break-all;">${esc(link)}</a>
         <span data-copy-link="${jsAttr(link)}" style="cursor:pointer; color:var(--gold); font-size:11px; white-space:nowrap;">📋 скопировать</span>`;
 }
 
@@ -2969,16 +3127,22 @@ function logEvent(name) {
 /* ---------- Вступление в семью по ссылке ?startapp=КОД + deep-link вкладок ---------- */
 async function handleInviteParam() {
     if (!platform.inTelegram) return;
-    const p = platform.startParam;
+    const p = String(platform.startParam || '').trim();
     if (!p) return;
-    if (/^fi_[A-Za-z0-9_-]{20,100}$/.test(p)) {
-        uiConfirm('Вас приглашают в семейный доступ. Отправить запрос владельцу семьи?', async () => { await familyJoin(p.slice(3)); });
+
+    if (/^fi_[A-Za-z0-9_-]{20,100}$/i.test(p)) {
+        const token = p.slice(3);
+        uiConfirm('Отправить владельцу заявку на вступление в семью? Доступ к общему бюджету появится только после его подтверждения.', async () => {
+            await familyRequestJoin(token);
+        });
         return;
     }
-    if (/^app_[A-Za-z0-9_-]{20,100}$/.test(p)) {
-        uiAlert('🎉 Вас пригласили в «Считай». Вы можете пользоваться личным бюджетом независимо от семейного доступа.');
+
+    if (/^app_[A-Za-z0-9_-]{20,100}$/i.test(p)) {
+        uiAlert('🎉 Вас пригласили в «Считай». Это обычное приглашение в приложение — доступ к чужим финансовым данным не предоставляется.');
         return;
     }
+
     const tabs = { balance: 'dashboard', budget: 'budget', goals: 'goals', debts: 'goals', pro: 'pro', settings: 'settings' };
     const tab = tabs[p.toLowerCase()];
     if (tab) {
@@ -2987,7 +3151,6 @@ async function handleInviteParam() {
         if (idx >= 0 && navs[idx]) switchTab(tab, navs[idx]);
     }
 }
-
 /* Делегированный обработчик для динамических элементов копирования */
 document.addEventListener('click', (e) => {
     const copyEl = e.target.closest('[data-copy-link]');
@@ -2996,13 +3159,36 @@ document.addEventListener('click', (e) => {
         if (navigator.clipboard) navigator.clipboard.writeText(copyEl.dataset.copyLink);
         copyEl.innerText = '✓ скопировано';
     }
+    const shareEl = e.target.closest('[data-share-link]');
+    if (shareEl) {
+        e.preventDefault();
+        const link = shareEl.dataset.shareLink || '';
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}`;
+        if (!platform.openTelegramLink(shareUrl)) {
+            if (navigator.clipboard) navigator.clipboard.writeText(link);
+            uiAlert('Ссылка скопирована. Отправьте её нужному человеку.');
+        }
+    }
 });
+
+/* ---------- Автосинхронизация при возврате в Mini App ---------- */
+let refreshInFlight = false;
+async function refreshFromCloud() {
+    if (!platform.inTelegram || refreshInFlight) return;
+    refreshInFlight = true;
+    try { await cloudLoad(); renderUI(); } catch (e) {} finally { refreshInFlight = false; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFromCloud(); });
+window.addEventListener('focus', refreshFromCloud);
+try { tg?.onEvent?.('activated', refreshFromCloud); } catch (e) {}
 
 /* ---------- Инициализация ---------- */
 (async function init() {
     try { await cloudLoad(); } catch (e) { console.error('cloudLoad failed', e); }
+    renderFamilyStatus();
     try { await handleInviteParam(); } catch (e) {}
     try { await fetchCbRates(); } catch (e) {}
+    try { await fetchPartners(); } catch (e) {}
     // тема
     const savedTheme = localStorage.getItem('sage_theme') || 'system';
     if (savedTheme) {
@@ -3021,8 +3207,6 @@ document.addEventListener('click', (e) => {
     initMonthSelector();
     migrateMonthKeys();
     autoApplyRecurring();
-    cloudHydrating = false;
-    if (cloudSaveDeferred && cloudReady) { cloudSaveDeferred = false; cloudSave(); }
     checkReminders();
     applyPrivacy();
     updatePinUI();
