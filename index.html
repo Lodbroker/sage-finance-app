@@ -1042,6 +1042,18 @@ function saveAll() {
     try { cloudSave(); } catch (e) {}
 }
 
+function saveAllLocalOnly() {
+    localStorage.setItem('sage_txs', JSON.stringify(transactions));
+    localStorage.setItem('sage_goals', JSON.stringify(goals));
+    localStorage.setItem('sage_deposits', JSON.stringify(deposits));
+    localStorage.setItem('sage_debts', JSON.stringify(debts));
+    localStorage.setItem('sage_rec', JSON.stringify(recurring));
+    localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
+    localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories));
+    localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons));
+    localStorage.setItem('sage_rates', JSON.stringify(rates));
+}
+
 /* ---------- Месячный селектор ---------- */
 function initMonthSelector() {
     const sel = document.getElementById('month-selector');
@@ -2394,26 +2406,52 @@ function applyState(s) {
         localStorage.setItem('sage_is_pro', isPro ? 'true' : 'false');
     }
 }
-async function cloudSave() {
-    if (!platform.inTelegram) return;              // не в Telegram — работаем локально
+let cloudSaveRunning = false;
+let cloudSavePending = false;
+let cloudSaveSeq = 0;
+
+async function cloudSaveNow(seq) {
+    if (!platform.inTelegram) return;
+    if (cloudSaveRunning) { cloudSavePending = true; return; }
+    cloudSaveRunning = true;
+    try {
+        const payload = getStatePayload();
+        const versionAtStart = cloudVersion;
+        const r = await fetch(API_URL + '/sync', {
+            method: 'POST',
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: platform.initData, state: payload, version: versionAtStart })
+        });
+        const d = await r.json().catch(() => null);
+        if (d && d.conflict) {
+            // Никогда не продолжаем отправлять старое локальное состояние с новой version.
+            // Сначала принимаем авторитетное состояние сервера.
+            if (d.state) applyState(d.state);
+            if (d.version) cloudVersion = d.version;
+            saveAllLocalOnly();
+            renderUI();
+        } else if (d && d.version) {
+            cloudVersion = d.version;
+        } else if (!r.ok) {
+            console.error('[schitay] /sync failed', r.status, d);
+        }
+    } catch (e) {
+        console.error('[schitay] /sync error', e);
+    } finally {
+        cloudSaveRunning = false;
+        if (cloudSavePending || seq !== cloudSaveSeq) {
+            cloudSavePending = false;
+            setTimeout(() => cloudSaveNow(cloudSaveSeq), 0);
+        }
+    }
+}
+
+function cloudSave() {
+    if (!platform.inTelegram) return;
+    cloudSaveSeq++;
     clearTimeout(cloudSaveTimer);
-    cloudSaveTimer = setTimeout(async () => {
-        try {
-            const r = await fetch(API_URL + '/sync', {
-                method: 'POST',
-                cache: 'no-store',
-                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store' },
-                body: JSON.stringify({ initData: platform.initData, state: getStatePayload(), version: cloudVersion })
-            });
-            const d = await r.json().catch(() => null);
-            if (d && d.version) cloudVersion = d.version;
-            if (d && d.conflict) {
-                uiConfirm('Данные изменил другой член семьи. Загрузить актуальную версию? Ваши последние локальные правки будут перезаписаны.', async () => {
-                    await cloudLoad(); renderUI();
-                });
-            }
-        } catch (e) { /* офлайн — данные останутся в localStorage */ }
-    }, 1500);
+    cloudSaveTimer = setTimeout(() => cloudSaveNow(cloudSaveSeq), 1200);
 }
 function clearFirstLaunchFinancialData() {
     [
@@ -2427,7 +2465,7 @@ async function cloudLoad() {
     if (!platform.inTelegram) return;
     try {
         const r = await fetch(API_URL + '/state', {
-            method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store' },
+            method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData: platform.initData })
         });
         if (!r.ok) return;
