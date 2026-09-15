@@ -2280,6 +2280,22 @@ function renderChart(catTotals) {
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
+    // Chart.js с legend: right смещает само кольцо влево.
+    // Поэтому сумма должна позиционироваться по реальному центру дуги, а не по центру canvas.
+    const positionChartTotal = () => {
+        const total = document.getElementById('chart-total');
+        const meta = chartInstance && chartInstance.getDatasetMeta(0);
+        const arc = meta && meta.data && meta.data[0];
+        if (!total || !arc) return;
+        total.style.inset = 'auto';
+        total.style.left = arc.x + 'px';
+        total.style.top = arc.y + 'px';
+        total.style.width = 'max-content';
+        total.style.transform = 'translate(-50%, -50%)';
+    };
+    positionChartTotal();
+    requestAnimationFrame(positionChartTotal);
+
     const hasData = Object.keys(catTotals).length > 0;
     const totalSum = hasData ? Object.values(catTotals).reduce((a, b) => a + b, 0) : 0;
     const sumEl = document.getElementById('chart-total-sum');
@@ -2414,6 +2430,14 @@ async function cloudSave() {
         } catch (e) { /* офлайн — данные останутся в localStorage */ }
     }, 1500);
 }
+function clearFirstLaunchFinancialData() {
+    [
+        'sage_txs','sage_goals','sage_deposits','sage_debts','sage_rec',
+        'sage_exp_cats','sage_inc_cats','sage_cat_icons','sage_rates',
+        'sage_currency','sage_rec_applied','sage_onboarded','sage_is_pro','sage_pro_until'
+    ].forEach(k => localStorage.removeItem(k));
+}
+
 async function cloudLoad() {
     if (!platform.inTelegram) return;
     try {
@@ -2424,6 +2448,14 @@ async function cloudLoad() {
         if (!r.ok) return;
         const d = await r.json();
         if (d.version) cloudVersion = d.version;
+        // При первом открытии нового поколения бота сервер уже сбросил
+        // старые тестовые финансовые данные. Очищаем и локальный кэш,
+        // затем один раз перезагружаем приложение, чтобы дефолты создались заново.
+        if (d.dataReset) {
+            clearFirstLaunchFinancialData();
+            location.reload();
+            return;
+        }
         if (d.state) applyState(d.state);
         if (d.botUsername) window._botUsername = d.botUsername;
         window._isFamily = !!d.isFamily;
