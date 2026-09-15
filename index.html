@@ -288,18 +288,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             </div>
         </div>
 
-        <div class="glass-card" id="quick-entry-card" style="background:linear-gradient(135deg, rgba(255,209,102,0.12), rgba(255,209,102,0.03)); border-color:rgba(255,209,102,0.28);">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
-                <div><div style="font-size:14px;font-weight:800;">⚡ Быстрая запись</div><div style="font-size:11px;color:var(--text-muted);">Напишите «350 кофе» или «зп 80000»</div></div>
-                <span class="tag gold">1 касание</span>
-            </div>
-            <div style="display:flex;gap:8px;">
-                <input id="quick-entry-input" class="form-input" placeholder="Например: 450 кофе" autocomplete="off" style="padding:11px 12px;">
-                <button type="button" class="btn-small" id="quick-entry-btn" style="min-width:48px;font-size:16px;">➜</button>
-            </div>
-            <div id="quick-entry-result" style="font-size:11px;color:var(--accent-light);margin-top:7px;min-height:15px;"></div>
-        </div>
-
         <div class="glass-card" id="upcoming-payments-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <div style="font-size:14px;font-weight:800;">📅 Ближайшие платежи</div>
@@ -1087,72 +1075,6 @@ function parseQuickEntry(text) {
     const category=isIncome ? (incomeCategories.find(c=>/зарплат/i.test(c)) || incomeCategories[0] || 'Зарплата') : guessCategory(label, {expenseCategories});
     return {type, amount, category};
 }
-async function quickAddFromApp() {
-    const input=document.getElementById('quick-entry-input'); const result=document.getElementById('quick-entry-result');
-    const raw=String(input?.value||'').trim();
-    const parsed=parseQuickEntry(raw);
-    if(!parsed) { if(result){result.className='quick-result-error';result.innerText='Не понял запись. Пример: «350 кофе» или «зп 80000»';} return; }
-
-    // В Telegram быстрая запись должна идти напрямую на сервер, а не только в localStorage.
-    // Иначе запись видна в Mini App, но может не попасть в общий family_data.
-    if (platform.inTelegram) {
-        if (result) { result.className='quick-result-ok'; result.innerText='⏳ Сохраняю…'; }
-        const clientId = 'appqa-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-        try {
-            const r = await fetch(API_URL + '/app-quickadd', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: platform.initData, text: raw, clientId })
-            });
-            const d = await r.json().catch(() => null);
-            if (!r.ok || !d || !d.ok) {
-                if (result) { result.className='quick-result-error'; result.innerText = d?.error === 'conflict' ? 'Не удалось сохранить. Повторите запись.' : (d?.error || 'Не удалось сохранить запись.'); }
-                return;
-            }
-            if (d.version) cloudVersion = Number(d.version);
-            await cloudLoad();
-            localStorage.setItem('sage_onboarded','1');
-            logEvent('tx_add');
-            renderUI();
-            if(result){result.className='quick-result-ok';result.innerText=`✓ ${d.tx?.type==='income'?'+':'-'}${fmt(d.tx?.amount ?? parsed.amount)} ${d.tx?.currency || currentCurrency} · ${catEmoji(d.tx?.category || parsed.category, d.tx?.type || parsed.type)} ${d.tx?.category || parsed.category}`;}
-            input.value='';
-            return;
-        } catch (e) {
-            if (result) { result.className='quick-result-error'; result.innerText='Ошибка связи с сервером. Запись не добавлена.'; }
-            return;
-        }
-    }
-
-    // Вне Telegram оставляем локальный режим.
-    const ts=Date.now();
-    const base=convertToBase(parsed.amount,currentCurrency);
-    transactions.unshift({id:ts,type:parsed.type,category:parsed.category,amount:parsed.amount,currency:currentCurrency,amountBase:base,month:monthNameOf(selectedMonth),mk:selectedMonth,date:'Быстрая запись',ts});
-    if(parsed.type==='income') applyAutoSavings(base);
-    saveAll(); localStorage.setItem('sage_onboarded','1'); logEvent('tx_add'); renderUI();
-    if(result){result.className='quick-result-ok';result.innerText=`✓ ${parsed.type==='income'?'+':'-'}${fmt(parsed.amount)} ${currentCurrency} · ${catEmoji(parsed.category,parsed.type)} ${parsed.category}`;}
-    input.value='';
-}
-// Элементы быстрой записи находятся внутри dashboard, который renderUI() пересоздаёт.
-// Поэтому слушатели вешаем через делегирование на document — они не теряются после renderUI().
-if (!window.__quickEntryDelegated) {
-    window.__quickEntryDelegated = true;
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest?.('#quick-entry-btn');
-        if (btn) {
-            e.preventDefault();
-            quickAddFromApp();
-        }
-    });
-    document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
-        const input = e.target.closest?.('#quick-entry-input');
-        if (input) {
-            e.preventDefault();
-            quickAddFromApp();
-        }
-    });
-}
-
 /* ---------- Навигация ---------- */
 function switchTab(tabId, el) {
     triggerHaptic();
@@ -1344,10 +1266,12 @@ function getMonthKey() {
 function autoApplyRecurring() {
     // Автоматически заносим постоянные платежи в текущий реальный месяц,
     // если день платежа уже наступил и платёж ещё не занесён.
+    // Важно: если ничего нового не добавили, НЕ делаем saveAll()/sync.
     const applied = JSON.parse(localStorage.getItem('sage_rec_applied')) || {};
     const key = getMonthKey();
     const now = new Date();
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    let changed = false;
     recurring.forEach(r => {
         const effDay = r.day === 31 ? lastDay : Math.min(r.day, lastDay); // 31 = «последний день месяца»
         if (now.getDate() >= effDay && !(applied[key] || []).includes(r.id)) {
@@ -1358,10 +1282,11 @@ function autoApplyRecurring() {
             });
             applied[key] = applied[key] || [];
             applied[key].push(r.id);
+            changed = true;
         }
     });
     localStorage.setItem('sage_rec_applied', JSON.stringify(applied));
-    saveAll();
+    if (changed) saveAll();
 }
 function isRecurringAppliedInSelected(r) {
     // Отображаем статус платежа в выбранном в селекторе месяце
@@ -2340,10 +2265,11 @@ function renderChart(catTotals) {
         const canvasRect = canvas.getBoundingClientRect();
         const wrap = canvas.parentElement;
         const wrapRect = wrap.getBoundingClientRect();
-        const scaleX = canvas.clientWidth / canvas.width;
-        const scaleY = canvas.clientHeight / canvas.height;
-        const x = (canvasRect.left - wrapRect.left) + arc.x * scaleX;
-        const y = (canvasRect.top - wrapRect.top) + arc.y * scaleY;
+        // Chart.js уже отдаёт arc.x/arc.y в CSS-координатах.
+        // Не умножаем их повторно на clientWidth/canvas.width — на телефонах
+        // canvas имеет увеличенный DPR, из-за чего подпись уезжала влево.
+        const x = (canvasRect.left - wrapRect.left) + arc.x;
+        const y = (canvasRect.top - wrapRect.top) + arc.y;
         total.style.inset = 'auto';
         total.style.left = x + 'px';
         total.style.top = y + 'px';
@@ -2468,55 +2394,25 @@ function applyState(s) {
         localStorage.setItem('sage_is_pro', isPro ? 'true' : 'false');
     }
 }
-let cloudSaveInFlight = false;
-let cloudSaveQueued = false;
-async function performCloudSave() {
-    if (!platform.inTelegram || cloudSaveInFlight) return;
-    cloudSaveInFlight = true;
-    try {
-        const payload = { initData: platform.initData, state: getStatePayload(), version: cloudVersion };
-        const r = await fetch(API_URL + '/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const d = await r.json().catch(() => null);
-        if (d && d.conflict) {
-            // Нельзя просто принять новую version и продолжить отправлять старый state.
-            // Сначала принимаем авторитетное серверное состояние.
-            if (d.state) {
-                cloudVersion = Number(d.version || cloudVersion);
-                applyState(d.state);
-                renderUI();
-            } else {
-                await cloudLoad();
-                renderUI();
-            }
-            cloudSaveQueued = false;
-            return;
-        }
-        if (!r.ok || !d || !d.ok) {
-            console.warn('[schitay] cloud sync failed', r.status, d);
-            return;
-        }
-        if (d.version) cloudVersion = Number(d.version);
-    } catch (e) {
-        console.warn('[schitay] cloud sync error', e);
-    } finally {
-        cloudSaveInFlight = false;
-        if (cloudSaveQueued) {
-            cloudSaveQueued = false;
-            cloudSave();
-        }
-    }
-}
 async function cloudSave() {
-    if (!platform.inTelegram) return;
-    cloudSaveQueued = true;
+    if (!platform.inTelegram) return;              // не в Telegram — работаем локально
     clearTimeout(cloudSaveTimer);
-    cloudSaveTimer = setTimeout(() => {
-        cloudSaveQueued = false;
-        performCloudSave();
+    cloudSaveTimer = setTimeout(async () => {
+        try {
+            const r = await fetch(API_URL + '/sync', {
+                method: 'POST',
+                cache: 'no-store',
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store' },
+                body: JSON.stringify({ initData: platform.initData, state: getStatePayload(), version: cloudVersion })
+            });
+            const d = await r.json().catch(() => null);
+            if (d && d.version) cloudVersion = d.version;
+            if (d && d.conflict) {
+                uiConfirm('Данные изменил другой член семьи. Загрузить актуальную версию? Ваши последние локальные правки будут перезаписаны.', async () => {
+                    await cloudLoad(); renderUI();
+                });
+            }
+        } catch (e) { /* офлайн — данные останутся в localStorage */ }
     }, 1500);
 }
 function clearFirstLaunchFinancialData() {
@@ -2531,7 +2427,7 @@ async function cloudLoad() {
     if (!platform.inTelegram) return;
     try {
         const r = await fetch(API_URL + '/state', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store' },
             body: JSON.stringify({ initData: platform.initData })
         });
         if (!r.ok) return;
