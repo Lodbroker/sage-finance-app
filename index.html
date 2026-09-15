@@ -507,6 +507,21 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             </div>
         </div>
 
+        <div class="section-title">Ежедневное напоминание</div>
+        <div class="glass-card">
+            <div class="toggle-row">
+                <div><div style="font-size:13px;font-weight:600;">Что сегодня по тратам и доходам?</div><div style="font-size:11px;color:var(--text-muted);">Если за день нет записей, бот напомнит вечером.</div></div>
+                <div class="toggle" id="daily-reminder-toggle" onclick="toggleDailyReminder()"></div>
+            </div>
+            <div id="daily-reminder-options" style="margin-top:10px;">
+                <label class="form-label">Время напоминания</label>
+                <select class="form-select" id="daily-reminder-hour" onchange="saveDailyReminder()">
+                    <option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option>
+                </select>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Время считается по часовому поясу телефона.</div>
+            </div>
+        </div>
+
         <div class="section-title">Безопасность</div>
         <div class="glass-card">
             <div class="toggle-row">
@@ -961,6 +976,10 @@ let familyPending = [];
 let isPro      = localStorage.getItem('sage_is_pro') === 'true';
 let proUntil   = Number(localStorage.getItem('sage_pro_until')) || 0;
 let trialUntil = Number(localStorage.getItem('sage_trial_until')) || 0;
+let trialUsed = localStorage.getItem('sage_trial_used') === 'true';
+let dailyReminderEnabled = localStorage.getItem('sage_daily_reminder_enabled') !== 'false';
+let dailyReminderHour = Number(localStorage.getItem('sage_daily_reminder_hour')) || 20;
+let dailyReminderTimezone = localStorage.getItem('sage_daily_reminder_timezone') || (Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Moscow');
 if (proUntil && Date.now() > proUntil) { localStorage.removeItem('sage_pro_until'); proUntil = 0; }
 // trialUntil сохраняем после окончания, чтобы показывать дату окончания; покупка PRO остаётся доступной.
 let currentCurrency = localStorage.getItem('sage_currency') || '₽';
@@ -1366,6 +1385,19 @@ document.getElementById('pin-keypad').addEventListener('click', (e) => {
 });
 
 /* ---------- Курсы валют ---------- */
+function applyDailyReminderUI() {
+    const t=document.getElementById('daily-reminder-toggle'), o=document.getElementById('daily-reminder-options'), s=document.getElementById('daily-reminder-hour');
+    if(t) t.classList.toggle('on',dailyReminderEnabled); if(o) o.style.display=dailyReminderEnabled?'block':'none'; if(s) s.value=String(dailyReminderHour);
+}
+async function saveDailyReminder() {
+    dailyReminderHour=Number(document.getElementById('daily-reminder-hour')?.value)||20;
+    dailyReminderTimezone=Intl.DateTimeFormat().resolvedOptions().timeZone || dailyReminderTimezone;
+    localStorage.setItem('sage_daily_reminder_hour',String(dailyReminderHour)); localStorage.setItem('sage_daily_reminder_timezone',dailyReminderTimezone);
+    if(!platform.inTelegram) return;
+    try { await fetch(API_URL+'/notifications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:platform.initData,action:'save',enabled:dailyReminderEnabled,hour:dailyReminderHour,timezone:dailyReminderTimezone})}); } catch(e) {}
+}
+function toggleDailyReminder() { dailyReminderEnabled=!dailyReminderEnabled; localStorage.setItem('sage_daily_reminder_enabled',String(dailyReminderEnabled)); applyDailyReminderUI(); saveDailyReminder(); }
+
 function saveRates() {
     rates.USD = Number(document.getElementById('rate-usd').value) || rates.USD;
     rates.EUR = Number(document.getElementById('rate-eur').value) || rates.EUR;
@@ -1797,7 +1829,7 @@ function openProModal(reason) {
     const trialActive = isPro && trialUntil > Date.now();
     const expiredTrial = trialUntil > 0 && trialUntil <= Date.now();
     if (status) status.innerText = isPro ? (trialActive ? ('Пробный PRO действует до ' + formatProDate(trialUntil)) : ('PRO действует до ' + formatProDate(proUntil))) : (expiredTrial ? ('Пробный PRO закончился ' + formatProDate(trialUntil)) : '');
-    if (trialBtn) { trialBtn.style.display = (!isPro && !trialUntil) ? 'block' : 'none'; }
+    if (trialBtn) { trialBtn.style.display = (!isPro && !trialUsed) ? 'block' : 'none'; }
     const buyBtn=document.getElementById('pro-buy-btn'); if(buyBtn) { buyBtn.style.display='block'; buyBtn.disabled=false; buyBtn.innerText=isPro ? 'Продлить / купить PRO' : 'Купить PRO'; }
     document.getElementById('pro-modal').style.display = 'flex';
 }
@@ -2684,6 +2716,7 @@ function applyState(s) {
         isPro = !!s.isPro && proUntil > Date.now();
         localStorage.setItem('sage_pro_until', String(proUntil));
         localStorage.setItem('sage_trial_until', String(trialUntil));
+        trialUsed = !!s.usedTrial; localStorage.setItem('sage_trial_used', trialUsed ? 'true' : 'false');
         localStorage.setItem('sage_is_pro', isPro ? 'true' : 'false');
     }
 }
@@ -2762,6 +2795,15 @@ async function cloudLoad() {
         if (d.botUsername) window._botUsername = d.botUsername;
         if (typeof d.isFamily === 'boolean') familyIsFamily = d.isFamily;
         if (d.role) familyRole = d.role;
+        if (d.notifications) {
+            dailyReminderEnabled = d.notifications.daily_enabled !== false;
+            dailyReminderHour = Number(d.notifications.daily_hour) || 20;
+            dailyReminderTimezone = String(d.notifications.timezone || dailyReminderTimezone);
+            localStorage.setItem('sage_daily_reminder_enabled', String(dailyReminderEnabled));
+            localStorage.setItem('sage_daily_reminder_hour', String(dailyReminderHour));
+            localStorage.setItem('sage_daily_reminder_timezone', dailyReminderTimezone);
+            applyDailyReminderUI();
+        }
         renderFamilyStatus();
         if (familyIsFamily && familyRole === 'owner') await loadFamilyMembers();
     } catch (e) {
@@ -3433,11 +3475,15 @@ try { tg?.onEvent?.('activated', refreshFromCloud); } catch (e) {}
 (async function init() {
     migrateMonthKeys();
     migrateBudgetPlans();
-    try { await cloudLoad(); } catch (e) { console.error('cloudLoad failed', e); }
+    // Быстрый старт: локальный кэш рисуется сразу, сеть обновляет его в фоне.
+    renderUI();
     renderFamilyStatus();
+    applyDailyReminderUI();
+    const cloudPromise = cloudLoad().catch(e => console.error('cloudLoad failed', e));
+    const ratesPromise = fetchCbRates().catch(() => {});
+    const partnersPromise = fetchPartners().catch(() => {});
     try { await handleInviteParam(); } catch (e) {}
-    try { await fetchCbRates(); } catch (e) {}
-    try { await fetchPartners(); } catch (e) {}
+    await Promise.allSettled([cloudPromise, ratesPromise, partnersPromise]);
     // тема
     const savedTheme = localStorage.getItem('sage_theme') || 'system';
     if (savedTheme) {
@@ -3451,6 +3497,7 @@ try { tg?.onEvent?.('activated', refreshFromCloud); } catch (e) {}
     document.getElementById('rate-usd').value = rates.USD;
     document.getElementById('rate-eur').value = rates.EUR;
     document.getElementById('week-limit-input').value = weekLimit || '';
+    applyDailyReminderUI();
     applyTripUI();
 
     initMonthSelector();
