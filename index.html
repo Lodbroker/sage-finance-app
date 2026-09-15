@@ -288,18 +288,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             </div>
         </div>
 
-        <div class="glass-card" id="quick-entry-card" style="background:linear-gradient(135deg, rgba(255,209,102,0.12), rgba(255,209,102,0.03)); border-color:rgba(255,209,102,0.28);">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
-                <div><div style="font-size:14px;font-weight:800;">⚡ Быстрая запись</div><div style="font-size:11px;color:var(--text-muted);">Напишите «350 кофе» или «зп 80000»</div></div>
-                <span class="tag gold">1 касание</span>
-            </div>
-            <div style="display:flex;gap:8px;">
-                <input id="quick-entry-input" class="form-input" placeholder="Например: 450 кофе" autocomplete="off" style="padding:11px 12px;">
-                <button type="button" class="btn-small" id="quick-entry-btn" onclick="quickAddFromApp()" style="min-width:48px;font-size:16px;">➜</button>
-            </div>
-            <div id="quick-entry-result" style="font-size:11px;color:var(--accent-light);margin-top:7px;min-height:15px;"></div>
-        </div>
-
         <div class="glass-card" id="upcoming-payments-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <div style="font-size:14px;font-weight:800;">📅 Ближайшие платежи</div>
@@ -548,12 +536,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div id="home-screen-status" style="font-size:11px;color:var(--text-muted);margin-top:7px;"></div>
         </div>
 
-        <div class="section-title">Быстрая запись с экрана</div>
-        <div class="glass-card">
-            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Трата голосом или виджетом, без открытия приложения. Полная инструкция — в боте, команда /setup.</div>
-            <div style="font-size: 11px; color: var(--text-muted);">Ключ выдаётся в разделе «Безопасность» выше (кнопка «Получить новый ключ»).</div>
-        </div>
-
         <div class="section-title">Семейный доступ</div>
         <div class="glass-card">
             <div id="family-status" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Статус: проверяем подключение…</div>
@@ -566,6 +548,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <button class="btn-small btn-outline" onclick="appInvite()">Пригласить в Считай</button>
             </div>
             <div id="family-invite-link" style="display:none; margin-top:10px; font-size:11px; line-height:1.45; word-break:break-word;"></div>
+            <div id="family-members" style="display:none; margin-top:12px;"></div>
             <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Новые участники не получают доступ сразу: сначала приходит заявка, а владелец подтверждает или отклоняет её в боте. Бесплатно — до 3 участников, PRO — безлимит.</div>
         </div>
 
@@ -942,6 +925,8 @@ function triggerHaptic() { try { platform.haptic(); } catch(e) {} }
 let familyIsFamily = false;
 let familyRole = '';
 let familyInviteToken = '';
+let familyMembers = [];
+let familyPending = [];
 let isPro      = localStorage.getItem('sage_is_pro') === 'true';
 let proUntil   = Number(localStorage.getItem('sage_pro_until')) || 0;
 if (proUntil && Date.now() > proUntil) { localStorage.removeItem('sage_pro_until'); proUntil = 0; }
@@ -1099,64 +1084,6 @@ function initMonthSelector() {
 document.getElementById('month-selector').onchange = (e) => {
     selectedMonth = e.target.value; resetTxPagination(); triggerHaptic(); renderUI();
 };
-
-/* ---------- Быстрая запись внутри Mini App ---------- */
-function parseQuickEntry(text) {
-    const raw=String(text||'').trim();
-    const m=raw.match(/^(?:([+-]?\d[\d\s.,]*)\s+(.+)|(?:зп|зарплата|зарплат[аы]?)\s+([+-]?\d[\d\s.,]*))$/i);
-    if(!m) return null;
-    let amountText=m[1] || m[3];
-    let label=(m[2] || 'Зарплата').trim();
-    const amount=Math.abs(Number(amountText.replace(/\s/g,'').replace(',','.')));
-    if(!amount || amount>1e12) return null;
-    const isIncome=!m[2] || /^(зп|зарплата|зарплат[аы]?)$/i.test(label);
-    const type=isIncome?'income':'expense';
-    const category=isIncome ? (incomeCategories.find(c=>/зарплат/i.test(c)) || incomeCategories[0] || 'Зарплата') : guessCategory(label, {expenseCategories});
-    return {type, amount, category};
-}
-async function quickAddFromApp() {
-    const input=document.getElementById('quick-entry-input'); const result=document.getElementById('quick-entry-result');
-    const text=String(input?.value||'').trim();
-    if(!text) { if(result){result.className='quick-result-error';result.innerText='Введите, например: 450 кофе';} return; }
-    const parsed=parseQuickEntry(text);
-    if(!parsed) { if(result){result.className='quick-result-error';result.innerText='Не понял запись. Пример: «350 кофе» или «зп 80000»';} return; }
-    if(!platform.inTelegram) {
-        const ts=Date.now(); const base=convertToBase(parsed.amount,currentCurrency);
-        transactions.unshift({id:ts,type:parsed.type,category:parsed.category,amount:parsed.amount,currency:currentCurrency,amountBase:base,month:monthNameOf(selectedMonth),mk:selectedMonth,date:'Быстрая запись',ts});
-        if(parsed.type==='income') applyAutoSavings(base);
-        saveAll(); renderUI(); input.value='';
-        if(result){result.className='quick-result-ok';result.innerText=`✓ ${parsed.type==='income'?'+':'-'}${fmt(parsed.amount)} ${currentCurrency} · ${catEmoji(parsed.category,parsed.type)} ${parsed.category}`;}
-        return;
-    }
-    try {
-        if(result){result.className='';result.innerText='Сохраняю…';}
-        const clientId = String(Date.now()) + '-' + Math.random().toString(36).slice(2,8);
-        const r = await fetch(API_URL + '/app-quickadd', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({initData:platform.initData,text,clientId})
-        });
-        const d = await r.json().catch(()=>null);
-        if(!r.ok || !d || !d.ok) throw new Error((d && d.error) || 'save');
-        await cloudLoad();
-        renderUI();
-        input.value='';
-        if(result){result.className='quick-result-ok';result.innerText=`✓ ${parsed.type==='income'?'+':'-'}${fmt(parsed.amount)} ${currentCurrency} · ${catEmoji(parsed.category,parsed.type)} ${parsed.category}`;}
-        try { logEvent('tx_add'); } catch(e) {}
-    } catch(e) {
-        if(result){result.className='quick-result-error';result.innerText='Не удалось сохранить. Попробуйте ещё раз.';}
-    }
-}
-const quickEntryBtn=document.getElementById('quick-entry-btn');
-const quickEntryInput=document.getElementById('quick-entry-input');
-document.addEventListener('click', (e) => {
-    const btn = e.target.closest('#quick-entry-btn');
-    if (btn) { e.preventDefault(); quickAddFromApp(); }
-});
-document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    const input = e.target.closest('#quick-entry-input');
-    if (input) { e.preventDefault(); quickAddFromApp(); }
-});
 
 /* ---------- Навигация ---------- */
 function switchTab(tabId, el) {
@@ -2609,6 +2536,7 @@ async function cloudLoad() {
         if (typeof d.isFamily === 'boolean') familyIsFamily = d.isFamily;
         if (d.role) familyRole = d.role;
         renderFamilyStatus();
+        if (familyIsFamily && familyRole === 'owner') await loadFamilyMembers();
     } catch (e) {
         /* сервер недоступен — работаем локально */
     }
@@ -2672,6 +2600,30 @@ function renderFamilyStatus() {
     status.innerHTML = '<b>Личный режим</b><br><span style="color:var(--text-muted)">Вы ещё не подключены к семейному бюджету.</span>';
     if (inviteActions) inviteActions.style.display = 'none';
     if (actions) actions.style.display = 'flex';
+}
+
+async function loadFamilyMembers() {
+    const box = document.getElementById('family-members');
+    if (!box || !platform.inTelegram || familyRole !== 'owner') return;
+    try {
+        const r = await fetch(API_URL + '/family', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({initData:platform.initData, action:'members'})
+        });
+        const d = await r.json().catch(()=>({}));
+        if (!r.ok || !d.ok) { box.style.display='none'; return; }
+        familyMembers = Array.isArray(d.members) ? d.members : [];
+        familyPending = Array.isArray(d.pending) ? d.pending : [];
+        const roleLabel = m => m.role === 'owner' ? 'владелец' : 'участник';
+        const nameOf = m => {
+            const n = [m.first_name, m.last_name].filter(Boolean).join(' ').trim();
+            return n || (m.username ? '@' + m.username : 'Пользователь #' + m.tg_id);
+        };
+        box.style.display='block';
+        box.innerHTML = '<div style="font-size:12px;font-weight:800;margin-bottom:7px;">👥 Участники семьи</div>' +
+            (familyMembers.length ? familyMembers.map(m => `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-size:11px;"><span>${esc(nameOf(m))}</span><span style="color:var(--text-muted)">${esc(roleLabel(m))}</span></div>`).join('') : '<div style="font-size:11px;color:var(--text-muted)">Участников пока нет.</div>') +
+            (familyPending.length ? '<div style="font-size:12px;font-weight:800;margin:11px 0 5px;">⏳ Ожидают подтверждения</div>' + familyPending.map(m => `<div style="padding:7px 0;border-top:1px solid var(--border);font-size:11px;"><b>${esc(nameOf(m))}</b><div style="color:var(--text-muted);margin-top:2px;">Заявка отправлена — подтвердите её в боте.</div></div>`).join('') : '');
+    } catch(e) { box.style.display='none'; }
 }
 
 async function familyCreate() {
@@ -2996,17 +2948,32 @@ async function startTrial() {
 }
 
 /* ---------- Ярлык Mini App на главный экран ---------- */
+function setHomeScreenStatus(status) {
+    const st=document.getElementById('home-screen-status');
+    const btn=document.getElementById('home-screen-btn');
+    if (!st) return;
+    if (status === 'added') { st.innerText='✓ «Считай» уже добавлен на главный экран'; if(btn) btn.style.display='none'; return; }
+    if (status === 'missed') { st.innerText='Ярлык ещё не добавлен. Нажмите кнопку ниже.'; if(btn) btn.style.display='block'; return; }
+    if (status === 'unsupported') { st.innerText='Эта версия Telegram или устройство не поддерживает ярлык Mini App.'; if(btn) btn.style.display='none'; return; }
+    st.innerText='Telegram поддерживает ярлык, но пока не сообщает его текущий статус.'; if(btn) btn.style.display='block';
+}
+function checkHomeScreen() {
+    if (!platform.inTelegram || !tg?.checkHomeScreenStatus) { setHomeScreenStatus('unsupported'); return; }
+    try { tg.checkHomeScreenStatus((status) => setHomeScreenStatus(status)); }
+    catch(e) { setHomeScreenStatus('unknown'); }
+}
 function addToHomeScreen() {
-    if (!platform.inTelegram || !tg?.addToHomeScreen) {
-        const st=document.getElementById('home-screen-status'); if(st) st.innerText='Функция доступна в поддерживаемых версиях Telegram на телефоне.';
-        return;
-    }
+    if (!platform.inTelegram || !tg?.addToHomeScreen) { setHomeScreenStatus('unsupported'); return; }
     try {
         tg.addToHomeScreen();
-        const st=document.getElementById('home-screen-status'); if(st) st.innerText='Запрос на добавление ярлыка отправлен.';
-    } catch(e) { uiAlert('Не удалось добавить ярлык. Попробуйте ещё раз из Telegram.'); }
+        const st=document.getElementById('home-screen-status'); if(st) st.innerText='Открылся системный запрос Telegram. Подтвердите добавление ярлыка.';
+    } catch(e) { uiAlert('Не удалось вызвать добавление ярлыка. Попробуйте обновить Telegram.'); }
 }
-try { tg?.onEvent?.('homeScreenAdded', () => { const st=document.getElementById('home-screen-status'); if(st) st.innerText='✓ «Считай» добавлен на главный экран'; }); } catch(e) {}
+try {
+    tg?.onEvent?.('homeScreenAdded', () => setHomeScreenStatus('added'));
+    tg?.onEvent?.('homeScreenChecked', (e) => setHomeScreenStatus(e && e.status ? e.status : 'unknown'));
+} catch(e) {}
+setTimeout(checkHomeScreen, 700);
 
 /* ---------- Ключ быстрой записи ---------- */
 async function quickTokenShow() {
@@ -3139,7 +3106,15 @@ async function handleInviteParam() {
     }
 
     if (/^app_[A-Za-z0-9_-]{20,100}$/i.test(p)) {
-        uiAlert('🎉 Вас пригласили в «Считай». Это обычное приглашение в приложение — доступ к чужим финансовым данным не предоставляется.');
+        const token = p.slice(4);
+        try {
+            const r = await fetch(API_URL + '/app-invite', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData, action:'consume', token}) });
+            const d = await r.json().catch(()=>({}));
+            if (r.ok && d.ok) uiAlert('🎉 Вас пригласили в «Считай». Добро пожаловать!');
+            else uiAlert('🎉 Вас пригласили в «Считай». Доступ к чужим финансовым данным не предоставляется.');
+        } catch(e) {
+            uiAlert('🎉 Вас пригласили в «Считай». Добро пожаловать!');
+        }
         return;
     }
 
