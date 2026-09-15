@@ -149,11 +149,23 @@
         .app-page.active { display: block; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
-        .modal-content { background: var(--bg-grad-2); border-radius: 24px; width: 100%; max-width: 420px; padding: 24px; border: 1px solid var(--card-border); max-height: 85vh; overflow-y: auto; }
-        .form-group { margin-bottom: 14px; }
-        .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-        .form-input, .form-select { width: 100%; padding: 12px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--card-border); color: var(--input-text); font-size: 15px; outline: none; }
-        .form-select option { background-color: var(--option-bg); color: #fff; }
+        .modal-content { background: var(--bg-grad-2); border-radius: 24px; width: min(100%, 420px); max-width: 420px; padding: 24px; border: 1px solid var(--card-border); max-height: 85vh; overflow-y: auto; overflow-x: hidden; }
+        .form-group { margin-bottom: 14px; min-width: 0; }
+        .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.25; }
+        .form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; width: 100%; }
+        .form-row > .form-group { min-width: 0; }
+        .form-row > .form-group .form-label { min-height: 30px; }
+        @media (max-width: 380px) {
+            .modal { padding: 10px; }
+            .modal-content { padding: 18px; border-radius: 20px; max-height: 90vh; }
+            .form-row { gap: 8px; }
+            .form-row > .form-group .form-label { min-height: 30px; }
+            .form-input, .form-select { padding: 11px 10px; }
+        }
+        .form-input, .form-select { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; display: block; padding: 12px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--card-border); color: var(--input-text); font-size: 15px; outline: none; }
+        select.form-select { color: var(--input-text); }
+        select.form-select option,
+        select.form-select optgroup { background-color: var(--option-bg); color: var(--text-main); }
         .btn-submit { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--accent-sage); color: #000; font-weight: bold; font-size: 15px; cursor: pointer; }
         .btn-small { padding: 6px 12px; border-radius: 8px; border: none; background: var(--accent-sage); color: #000; font-weight: bold; font-size: 12px; cursor: pointer; white-space: nowrap; }
         .btn-danger { background: var(--danger); color: #fff; }
@@ -697,12 +709,12 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Категория расхода</label>
                 <select class="form-select" id="new-rec-category"></select>
             </div>
-            <div style="display:flex; gap:8px;">
-                <div class="form-group" style="flex:1;">
+            <div class="form-row">
+                <div class="form-group">
                     <label class="form-label">Сумма</label>
                     <input type="number" class="form-input" id="new-rec-amount" placeholder="299" inputmode="decimal">
                 </div>
-                <div class="form-group" style="flex:1;">
+                <div class="form-group">
                     <label class="form-label">День месяца (31 = последний день)</label>
                     <input type="number" class="form-input" id="new-rec-day" placeholder="15" min="1" max="31" inputmode="numeric">
                 </div>
@@ -726,12 +738,12 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Название</label>
                 <input type="text" class="form-input" id="edit-rec-name">
             </div>
-            <div style="display:flex; gap:8px;">
-                <div class="form-group" style="flex:1;">
+            <div class="form-row">
+                <div class="form-group">
                     <label class="form-label">Сумма</label>
                     <input type="number" class="form-input" id="edit-rec-amount" inputmode="decimal">
                 </div>
-                <div class="form-group" style="flex:1;">
+                <div class="form-group">
                     <label class="form-label">День месяца (31 = последний день)</label>
                     <input type="number" class="form-input" id="edit-rec-day" min="1" max="31" inputmode="numeric">
                 </div>
