@@ -253,7 +253,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div class="avatar" id="user-avatar">U</div>
             <div>
                 <div style="font-size: 11px; color: var(--text-muted);">
-                    Считай <span id="pro-status-tag" class="badge-pro" style="display:none;">PRO ACTIVE</span>
+                    Считай <span id="pro-status-tag" class="badge-pro" style="display:none;">PRO</span>
                 </div>
                 <div style="font-weight: bold; font-size: 14px;" id="user-name">Пользователь</div>
             </div>
@@ -432,6 +432,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         <div class="glass-card">
             <div style="font-size: 15px; font-weight: bold; margin-bottom: 10px;">Премиум доступ <span class="badge-pro">PRO</span></div>
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Годовая аналитика, импорт выписок, напоминания, эксклюзивные темы, семейный доступ и экспорт отчетов.</div>
+            <div id="pro-expiry-info" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;"></div>
             <button class="btn-submit" style="background: var(--gold);" onclick="openProModal()" id="pro-cta-btn">Активировать PRO</button>
         </div>
 
@@ -884,7 +885,8 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <div id="pro-reason" style="font-size: 12px; color: var(--gold); margin-bottom: 12px; display: none;"></div>
                 <button class="btn-submit" style="background: var(--gold); margin-bottom: 8px;" onclick="buyProSubscription('month')">PRO — 150 ⭐ / месяц</button>
                 <button class="btn-submit" style="background: var(--gold); opacity: 0.85; margin-bottom: 8px;" onclick="buyProSubscription('year')">PRO на год — 1500 ⭐ (2 мес в подарок)</button>
-                <button class="btn-submit btn-outline" style="margin-bottom: 8px;" onclick="startTrial()">🎁 Попробовать 7 дней бесплатно</button>
+                <button class="btn-submit btn-outline" id="trial-btn" style="margin-bottom: 8px;" onclick="startTrial()">🎁 Попробовать 7 дней бесплатно</button>
+                <div id="pro-modal-status" style="font-size:11px;color:var(--text-muted);text-align:center;margin:4px 0 10px;"></div>
                 <button class="btn-submit btn-outline" style="margin-bottom: 10px;" onclick="donateStars()">☕ Поддержать проект (25 ⭐)</button>
                 <div style="font-size: 11px; color: var(--text-muted); text-align: center;">Нет звёзд? Купите через @PremiumBot — там работает СберПэй и российские карты, а потом оплатите здесь</div>
                 <button class="btn-submit btn-outline" onclick="closeProModal()">Отмена</button>
@@ -958,7 +960,9 @@ let familyMembers = [];
 let familyPending = [];
 let isPro      = localStorage.getItem('sage_is_pro') === 'true';
 let proUntil   = Number(localStorage.getItem('sage_pro_until')) || 0;
+let trialUntil = Number(localStorage.getItem('sage_trial_until')) || 0;
 if (proUntil && Date.now() > proUntil) { localStorage.removeItem('sage_pro_until'); proUntil = 0; }
+// trialUntil сохраняем после окончания, чтобы показывать дату окончания; покупка PRO остаётся доступной.
 let currentCurrency = localStorage.getItem('sage_currency') || '₽';
 let privacyOn  = localStorage.getItem('sage_privacy') === 'true';
 let pinCode    = localStorage.getItem('sage_pin') || null;
@@ -1788,6 +1792,13 @@ function openProModal(reason) {
     const r = document.getElementById('pro-reason');
     if (reason) { r.innerText = reason; r.style.display = 'block'; logEvent('pro_view'); }
     else r.style.display = 'none';
+    const status = document.getElementById('pro-modal-status');
+    const trialBtn = document.getElementById('trial-btn');
+    const trialActive = isPro && trialUntil > Date.now();
+    const expiredTrial = trialUntil > 0 && trialUntil <= Date.now();
+    if (status) status.innerText = isPro ? (trialActive ? ('Пробный PRO действует до ' + formatProDate(trialUntil)) : ('PRO действует до ' + formatProDate(proUntil))) : (expiredTrial ? ('Пробный PRO закончился ' + formatProDate(trialUntil)) : '');
+    if (trialBtn) { trialBtn.style.display = (!isPro && !trialUntil) ? 'block' : 'none'; }
+    const buyBtn=document.getElementById('pro-buy-btn'); if(buyBtn) { buyBtn.style.display='block'; buyBtn.disabled=false; buyBtn.innerText=isPro ? 'Продлить / купить PRO' : 'Купить PRO'; }
     document.getElementById('pro-modal').style.display = 'flex';
 }
 function closeProModal() { document.getElementById('pro-modal').style.display = 'none'; }
@@ -1967,6 +1978,14 @@ function renderTransactionsList(filteredTxs) {
     txListEl.innerHTML = '';
 
     const isSearch = !!txSearchQuery;
+    if (familyIsFamily && familyMembers.length) {
+        const host=document.getElementById('tx-list')?.parentElement;
+        if(host && !document.getElementById('family-tx-filter')) {
+            const sel=document.createElement('select'); sel.id='family-tx-filter'; sel.style.cssText='width:100%;margin:4px 0 8px;padding:8px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text-main);font-size:11px;';
+            sel.innerHTML='<option value="">Все участники</option>'+familyMembers.map(m=>`<option value="${m.tg_id}">${esc(([m.first_name,m.last_name].filter(Boolean).join(' ')||('@'+(m.username||m.tg_id))))}</option>`).join('');
+            host.insertBefore(sel, document.getElementById('tx-list')); sel.onchange=()=>{ const v=sel.value; renderTransactionsList(v?transactions.filter(t=>String(t.authorId)===String(v)):transactions.filter(t=>t.mk===selectedMonth)); };
+        }
+    }
     const total = filteredTxs.length;
     const shown = filteredTxs.slice(0, txVisibleCount);
     let previousMonth = null;
@@ -2044,21 +2063,33 @@ function renderTransactionsList(filteredTxs) {
     }
 }
 
+function formatProDate(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' в ' + new Date(ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+}
 function renderUI() {
+    const trialActive = isPro && trialUntil > Date.now();
+    const trialExpired = trialUntil > 0 && trialUntil <= Date.now();
     if (isPro) {
         document.body.classList.add('is-pro');
         document.getElementById('yearly-lock-overlay').style.display = 'none';
         document.getElementById('pro-status-tag').style.display = 'inline-block';
-        document.getElementById('pro-cta-btn').innerText = 'PRO активирован ✓';
-        document.getElementById('pro-cta-btn').disabled = true;
-        document.getElementById('pro-cta-btn').style.opacity = 0.6;
+        document.getElementById('pro-status-tag').innerText = trialActive ? 'PRO · пробный' : 'PRO';
+        // Во время пробного периода покупка должна оставаться доступной.
+        document.getElementById('pro-cta-btn').innerText = trialActive ? 'Купить PRO' : 'PRO активирован ✓';
+        document.getElementById('pro-cta-btn').disabled = !trialActive;
+        document.getElementById('pro-cta-btn').style.opacity = trialActive ? 1 : 0.6;
+        const info = document.getElementById('pro-expiry-info');
+        if (info) info.innerText = trialActive ? ('Пробный PRO действует до ' + formatProDate(trialUntil)) : ('PRO действует до ' + formatProDate(proUntil));
     } else {
         document.body.classList.remove('is-pro');
         document.getElementById('yearly-lock-overlay').style.display = 'flex';
         document.getElementById('pro-status-tag').style.display = 'none';
-        document.getElementById('pro-cta-btn').innerText = 'Активировать PRO';
+        document.getElementById('pro-cta-btn').innerText = 'Купить PRO';
         document.getElementById('pro-cta-btn').disabled = false;
         document.getElementById('pro-cta-btn').style.opacity = 1;
+        const info = document.getElementById('pro-expiry-info');
+        if (info) info.innerText = trialExpired ? ('Пробный PRO закончился ' + formatProDate(trialUntil)) : 'PRO не активен';
     }
 
     // Итоги всегда считаются по выбранному месяцу, независимо от активного поиска.
@@ -2318,7 +2349,9 @@ async function buyProSubscription(period) {
         });
         const d = await r.json();
         if (d.link) {
+            if (d.funnelKey) fetch(API_URL + '/pro-funnel', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:platform.initData,invoiceKey:d.funnelKey,status:'opened'})}).catch(()=>{});
             platform.openInvoice(d.link, async (st) => {
+                if (d.funnelKey && st === 'cancelled') fetch(API_URL + '/pro-funnel', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:platform.initData,invoiceKey:d.funnelKey,status:'cancelled'})}).catch(()=>{});
                 if (st === 'paid' || st === 'cancelled') {
                     await cloudLoad(); renderUI();
                     if (st === 'paid') uiAlert('🎉 PRO активирован! Спасибо за поддержку.');
@@ -2518,6 +2551,15 @@ function renderChart(catTotals) {
     };
     requestAnimationFrame(positionChartTotal);
     setTimeout(positionChartTotal, 80);
+    setTimeout(positionChartTotal, 250);
+    setTimeout(positionChartTotal, 600);
+    if (window.ResizeObserver) {
+        const wrap = document.getElementById('expenseChart')?.parentElement;
+        if (wrap) { if (window._chartResizeObserver) window._chartResizeObserver.disconnect(); window._chartResizeObserver = new ResizeObserver(() => requestAnimationFrame(positionChartTotal)); window._chartResizeObserver.observe(wrap); }
+    }
+    if (window._chartResizeHandler) window.removeEventListener('resize', window._chartResizeHandler);
+    window._chartResizeHandler = positionChartTotal;
+    window.addEventListener('resize', window._chartResizeHandler);
     const hasData = Object.keys(catTotals).length > 0;
     const totalSum = hasData ? Object.values(catTotals).reduce((a, b) => a + b, 0) : 0;
     const sumEl = document.getElementById('chart-total-sum');
@@ -2638,8 +2680,10 @@ function applyState(s) {
                                  document.getElementById('currency-select').value = currentCurrency; }
     if (Object.prototype.hasOwnProperty.call(s, 'proUntil') || Object.prototype.hasOwnProperty.call(s, 'isPro')) {
         proUntil = Number(s.proUntil) || 0;
+        trialUntil = Number(s.trialUntil) || 0;
         isPro = !!s.isPro && proUntil > Date.now();
         localStorage.setItem('sage_pro_until', String(proUntil));
+        localStorage.setItem('sage_trial_until', String(trialUntil));
         localStorage.setItem('sage_is_pro', isPro ? 'true' : 'false');
     }
 }
