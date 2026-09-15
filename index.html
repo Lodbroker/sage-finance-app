@@ -964,10 +964,9 @@ let selectedMonth = monthKeyOf(new Date().getFullYear(), new Date().getMonth());
 const allMonths = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const MONTH_NUM = { 'Январь':0,'Февраль':1,'Март':2,'Апрель':3,'Май':4,'Июнь':5,'Июль':6,'Август':7,'Сентябрь':8,'Октябрь':9,'Ноябрь':10,'Декабрь':11 };
 
-let partnerBanks = [
-    { id: 1, name: 'Т-Банк (Black)', desc: 'Кэшбэк до 30% + 1000 ₽ бонуса', url: 'https://tbank.ru' },
-    { id: 2, name: 'Альфа-Карта', desc: 'Бесплатное обслуживание навсегда', url: 'https://alfabank.ru' }
-];
+// CPA-предложения загружаются с сервера через /state.
+// Тестовые банковские URL намеренно не используются.
+let partnerBanks = [];
 
 let expenseCategories = JSON.parse(localStorage.getItem('sage_exp_cats')) || {
     'Еда и продукты': 25000, 'Жилье и КУ': 20000, 'Транспорт': 10000,
@@ -2081,6 +2080,7 @@ function renderPartnerPlashka() {
     if (!box) return;
     clearInterval(plashkaTimer);
     if (isPro) { box.innerHTML = ''; return; }
+    if (!partnerBanks.length) { box.innerHTML = ''; return; }
     const show = () => {
         const b = partnerBanks[plashkaIdx % partnerBanks.length];
         plashkaIdx++;
@@ -2280,21 +2280,30 @@ function renderChart(catTotals) {
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
-    // Chart.js с legend: right смещает само кольцо влево.
-    // Поэтому сумма должна позиционироваться по реальному центру дуги, а не по центру canvas.
+    // Chart.js с legend: right смещает кольцо. arc.x/arc.y заданы в координатах canvas,
+    // поэтому переводим их в реальные CSS-пиксели контейнера (важно для DPR/масштабирования Telegram).
     const positionChartTotal = () => {
         const total = document.getElementById('chart-total');
+        const canvas = document.getElementById('expenseChart');
         const meta = chartInstance && chartInstance.getDatasetMeta(0);
         const arc = meta && meta.data && meta.data[0];
-        if (!total || !arc) return;
+        if (!total || !canvas || !arc || !canvas.clientWidth || !canvas.clientHeight) return;
+        const canvasRect = canvas.getBoundingClientRect();
+        const wrap = canvas.parentElement;
+        const wrapRect = wrap.getBoundingClientRect();
+        const scaleX = canvas.clientWidth / canvas.width;
+        const scaleY = canvas.clientHeight / canvas.height;
+        const x = (canvasRect.left - wrapRect.left) + arc.x * scaleX;
+        const y = (canvasRect.top - wrapRect.top) + arc.y * scaleY;
         total.style.inset = 'auto';
-        total.style.left = arc.x + 'px';
-        total.style.top = arc.y + 'px';
+        total.style.left = x + 'px';
+        total.style.top = y + 'px';
         total.style.width = 'max-content';
         total.style.transform = 'translate(-50%, -50%)';
     };
     positionChartTotal();
     requestAnimationFrame(positionChartTotal);
+    setTimeout(positionChartTotal, 50);
 
     const hasData = Object.keys(catTotals).length > 0;
     const totalSum = hasData ? Object.values(catTotals).reduce((a, b) => a + b, 0) : 0;
@@ -2457,6 +2466,13 @@ async function cloudLoad() {
             return;
         }
         if (d.state) applyState(d.state);
+        if (Array.isArray(d.partners)) {
+            partnerBanks = d.partners.filter(b => b && /^https?:\/\/[^\s"'<>`\\]{1,500}$/.test(String(b.url || ''))).map(b => ({
+                name: String(b.name || '').slice(0, 100),
+                desc: String(b.desc || '').slice(0, 200),
+                url: String(b.url).slice(0, 500)
+            }));
+        }
         if (d.botUsername) window._botUsername = d.botUsername;
         window._isFamily = !!d.isFamily;
         window._familyRole = d.role || null;
@@ -2933,7 +2949,6 @@ document.addEventListener('click', (e) => {
     try { await cloudLoad(); } catch (e) { console.error('cloudLoad failed', e); }
     try { await handleInviteParam(); } catch (e) {}
     try { await fetchCbRates(); } catch (e) {}
-    try { await fetchPartners(); } catch (e) {}
     // тема
     const savedTheme = localStorage.getItem('sage_theme') || 'system';
     if (savedTheme) {
