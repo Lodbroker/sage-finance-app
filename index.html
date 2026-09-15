@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' https://*.workers.dev https://*.supabase.co https://api.telegram.org; img-src 'self' data: https:; object-src 'none'; base-uri 'self'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sage Finance TMA v7 PRO</title>
+    <title>Считай — личные финансы</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -38,6 +38,25 @@
             --bg-grad-1: #071E26; --bg-grad-2: #0E3846;
             --accent-sage: #4DA8DA; --accent-light: #90E0EF; --option-bg: #0E3846;
         }
+        body[data-theme="system"][data-tg-scheme="light"] {
+            --bg-grad-1: #F2F6F3; --bg-grad-2: #E2EDE6;
+            --card-bg: rgba(255, 255, 255, 0.72); --card-border: rgba(10, 30, 20, 0.10);
+            --text-main: #16241D; --text-muted: #5C6E64; --option-bg: #FFFFFF;
+            --accent-sage: #2F8F63; --accent-light: #1F6B4A;
+            --nav-bg: rgba(255, 255, 255, 0.94);
+            --input-bg: rgba(10, 30, 20, 0.06); --input-text: #16241D;
+            --soft-bg: rgba(10, 30, 20, 0.06);
+        }
+        body[data-theme="system"][data-tg-scheme="dark"] {
+            --bg-grad-1: #0B1311; --bg-grad-2: #16241F;
+            --card-bg: rgba(255, 255, 255, 0.07); --card-border: rgba(255, 255, 255, 0.12);
+            --text-main: #F4F7F5; --text-muted: #8E9F96; --option-bg: #16241F;
+            --accent-sage: #52B788; --accent-light: #74C69D;
+            --nav-bg: rgba(10, 15, 13, 0.95);
+            --input-bg: rgba(255, 255, 255, 0.08); --input-text: #FFFFFF;
+            --soft-bg: rgba(255, 255, 255, 0.08);
+        }
+
         body[data-theme="light"] {
             --bg-grad-1: #F2F6F3; --bg-grad-2: #E2EDE6;
             --card-bg: rgba(255, 255, 255, 0.72); --card-border: rgba(10, 30, 20, 0.10);
@@ -192,18 +211,23 @@
         .chat-input-row .form-input { flex: 1; }
         .chip-row { display: flex; gap: 6px; margin: 8px 16px; flex-wrap: wrap; }
         .chip { padding: 6px 12px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--card-border); font-size: 11px; color: var(--text-muted); cursor: pointer; }
+        .emoji-picker { display:flex; flex-wrap:wrap; gap:6px; }
+        .emoji-btn { width:38px; height:38px; border-radius:11px; border:1px solid var(--card-border); background:var(--input-bg); font-size:19px; cursor:pointer; display:flex;align-items:center;justify-content:center; }
+        .emoji-btn.active { border-color:var(--accent-sage); background:rgba(82,183,136,.18); box-shadow:0 0 0 1px var(--accent-sage) inset; }
+        .category-emoji { width:30px;height:30px;border-radius:9px;background:var(--soft-bg);display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+        .quick-result-ok { color:var(--accent-light); }
+        .quick-result-error { color:#FFA8A8; }
 
         .tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 700; }
         .tag.green { background: rgba(82,183,136,0.2); color: var(--accent-light); }
         .tag.red { background: rgba(230,57,70,0.2); color: #FFA8A8; }
         .tag.gold { background: rgba(255,209,102,0.2); color: var(--gold); }
     </style>
-<base target="_blank">
 </head>
 <body>
 <script>
 /* Тема ДО первой отрисовки — иначе мелькает дефолтная (FOUC) */
-try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAttribute('data-theme', __t); } catch (e) {}
+try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.setAttribute('data-theme', __t); if (!localStorage.getItem('sage_theme')) localStorage.setItem('sage_theme','system'); if (__t === 'system' && window.Telegram?.WebApp?.colorScheme) document.body.setAttribute('data-tg-scheme', window.Telegram.WebApp.colorScheme); } catch (e) { document.body.setAttribute('data-theme','system'); }
 </script>
 
 <!-- ==================== PIN OVERLAY ==================== -->
@@ -229,7 +253,7 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
             <div class="avatar" id="user-avatar">U</div>
             <div>
                 <div style="font-size: 11px; color: var(--text-muted);">
-                    Sage Finance <span id="pro-status-tag" class="badge-pro" style="display:none;">PRO ACTIVE</span>
+                    Считай <span id="pro-status-tag" class="badge-pro" style="display:none;">PRO ACTIVE</span>
                 </div>
                 <div style="font-weight: bold; font-size: 14px;" id="user-name">Пользователь</div>
             </div>
@@ -246,8 +270,8 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
     <!-- PAGE 1: DASHBOARD -->
     <div class="app-page active" id="page-dashboard">
         <div class="kpi-grid">
-            <div class="kpi-card"><div class="kpi-title">Доходы</div><div class="kpi-value income hideable" id="total-income">0 ₽</div></div>
-            <div class="kpi-card"><div class="kpi-title">Расходы</div><div class="kpi-value expense hideable" id="total-expense">0 ₽</div></div>
+            <div class="kpi-card"><div class="kpi-title">Доходы</div><div class="kpi-value income hideable" id="total-income">0 ₽</div><div class="hideable" id="trend-income" style="font-size:10px; color:var(--text-muted); margin-top:2px;"></div></div>
+            <div class="kpi-card"><div class="kpi-title">Расходы</div><div class="kpi-value expense hideable" id="total-expense">0 ₽</div><div class="hideable" id="trend-expense" style="font-size:10px; color:var(--text-muted); margin-top:2px;"></div></div>
             <div class="kpi-card"><div class="kpi-title">Накопления</div><div class="kpi-value savings hideable" id="total-savings">0 ₽</div></div>
             <div class="kpi-card"><div class="kpi-title">Чистый остаток</div><div class="kpi-value hideable" id="total-balance">0 ₽</div></div>
             <div class="kpi-card"><div class="kpi-title">Трат в день (средн.)</div><div class="kpi-value hideable" id="avg-daily">0 ₽</div></div>
@@ -255,6 +279,35 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         </div>
 
         <div id="partner-plashka"></div>
+        <div class="glass-card" id="free-to-spend-card" style="margin-top:10px; background:linear-gradient(135deg, rgba(82,183,136,0.16), rgba(82,183,136,0.04)); border-color:rgba(82,183,136,0.28);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;">Свободно до конца месяца</div>
+                <div class="hideable" id="free-to-spend" style="font-size:25px;font-weight:800;margin-top:3px;">0 ₽</div>
+                <div id="free-to-spend-hint" style="font-size:11px;color:var(--text-muted);margin-top:3px;"></div></div>
+                <div style="font-size:24px;">💚</div>
+            </div>
+        </div>
+
+        <div class="glass-card" id="quick-entry-card" style="background:linear-gradient(135deg, rgba(255,209,102,0.12), rgba(255,209,102,0.03)); border-color:rgba(255,209,102,0.28);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+                <div><div style="font-size:14px;font-weight:800;">⚡ Быстрая запись</div><div style="font-size:11px;color:var(--text-muted);">Напишите «350 кофе» или «зп 80000»</div></div>
+                <span class="tag gold">1 касание</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <input id="quick-entry-input" class="form-input" placeholder="Например: 450 кофе" autocomplete="off" style="padding:11px 12px;">
+                <button class="btn-small" id="quick-entry-btn" style="min-width:48px;font-size:16px;">➜</button>
+            </div>
+            <div id="quick-entry-result" style="font-size:11px;color:var(--accent-light);margin-top:7px;min-height:15px;"></div>
+        </div>
+
+        <div class="glass-card" id="upcoming-payments-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-size:14px;font-weight:800;">📅 Ближайшие платежи</div>
+                <button class="btn-small btn-outline" onclick="switchTab('budget', document.querySelector('.nav-item:nth-child(2)'))">Все</button>
+            </div>
+            <div id="dashboard-upcoming-payments"></div>
+        </div>
+
         <div id="trip-banner" style="display:none; margin:4px 16px 10px; padding:8px 14px; border-radius:12px; background:rgba(255,209,102,0.12); border:1px solid var(--gold); font-size:12px; align-items:center; gap:8px;"><i class="fa-solid fa-plane"></i> Режим поездки: траты не попадают в бюджет <span onclick="toggleTripMode()" style="color:var(--gold); font-weight:bold; cursor:pointer; margin-left:6px;">выключить</span></div>
         <div id="onboarding-slot"></div>
         <div class="glass-card" id="insights-card"></div>
@@ -268,10 +321,13 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                 </div>
             </div>
             <div id="slide-0" class="carousel-slide">
-                <div class="chart-container"><canvas id="expenseChart"></canvas>
-                    <div id="chart-total" class="hideable" style="position:absolute; top:50%; left:34%; transform:translate(-50%,-50%); text-align:center; pointer-events:none; line-height:1.25;">
-                        <div id="chart-total-sum" style="font-size:16px; font-weight:700; color:var(--text-main);"></div>
-                        <div id="chart-total-label" style="font-size:10px; font-weight:600; color:var(--text-muted);"></div>
+                <div class="chart-container" style="display:flex; align-items:center;">
+                    <div style="position:relative; flex:1; height:100%;">
+                        <canvas id="expenseChart"></canvas>
+                        <div id="chart-total" class="hideable" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; pointer-events:none; line-height:1.25;">
+                            <div id="chart-total-sum" style="font-size:16px; font-weight:700; color:var(--text-main);"></div>
+                            <div id="chart-total-label" style="font-size:10px; font-weight:600; color:var(--text-muted);"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -331,6 +387,10 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         </div>
 
         <div id="subtab-goals">
+            <div class="glass-card" style="background: linear-gradient(135deg, rgba(255,209,102,0.12), rgba(255,209,102,0.03)); border-color: rgba(255,209,102,0.35);">
+                <div style="font-size: 11px; color: var(--text-muted);">Накоплено всего по копилкам</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--gold);" class="hideable" id="goals-total">0 ₽</div>
+            </div>
             <div class="glass-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                     <div style="font-size: 15px; font-weight: bold;">Финансовые копилки</div>
@@ -407,14 +467,14 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         <div class="section-title">Внешний вид и валюта</div>
         <div class="glass-card">
             <div class="form-group">
-                <label class="form-label">Цветовая тема</label>
+                <label class="form-label">Цветовая тема <span style="color:var(--accent-light);">по умолчанию — системная</span></label>
                 <div class="theme-selector">
-                    <div class="theme-btn active" onclick="setTheme('sage', this)">Шалфей</div>
+                    <div class="theme-btn active" onclick="setTheme('system', this)">Системная</div>
+                    <div class="theme-btn" onclick="setTheme('sage', this)">Шалфей</div>
                     <div class="theme-btn" onclick="setTheme('graphite', this)">Графит</div>
                     <div class="theme-btn" onclick="setTheme('neon', this)">Неон <span class="badge-pro">PRO</span></div>
                     <div class="theme-btn" onclick="setTheme('ocean', this)">Океан <span class="badge-pro">PRO</span></div>
                     <div class="theme-btn" onclick="setTheme('light', this)">Светлая</div>
-                    <div class="theme-btn" onclick="setTheme('system', this)">Системная</div>
                 </div>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
@@ -470,7 +530,7 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                 <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Для голосовых команд и виджетов. Кто знает ключ, тот может добавлять траты. Храните как пароль.</div>
                 <div id="quick-token-box" style="display:none; font-size:12px; margin-bottom:8px; word-break:break-all;"></div>
                 <div style="display:flex; gap:8px;">
-                    <button class="btn-small" onclick="quickTokenShow()">Показать ключ</button>
+                    <button class="btn-small" onclick="quickTokenShow()">Получить новый ключ</button>
                     <button class="btn-small btn-outline" onclick="quickTokenRevoke()">Перевыпустить</button>
                 </div>
             </div>
@@ -480,10 +540,18 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
             </div>
         </div>
 
+        <div class="section-title">Быстрый доступ</div>
+        <div class="glass-card">
+            <div style="font-size:13px;font-weight:700;margin-bottom:5px;">📱 Добавить «Считай» на главный экран</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:9px;">Открывайте финансовый помощник одним нажатием, как обычное приложение Telegram.</div>
+            <button class="btn-submit" onclick="addToHomeScreen()" id="home-screen-btn">Добавить на главный экран</button>
+            <div id="home-screen-status" style="font-size:11px;color:var(--text-muted);margin-top:7px;"></div>
+        </div>
+
         <div class="section-title">Быстрая запись с экрана</div>
         <div class="glass-card">
             <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Трата голосом или виджетом, без открытия приложения. Полная инструкция — в боте, команда /setup.</div>
-            <div style="font-size: 11px; color: var(--text-muted);">Ключ выдаётся в разделе «Безопасность» выше (кнопка «Показать ключ»).</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Ключ выдаётся в разделе «Безопасность» выше (кнопка «Получить новый ключ»).</div>
         </div>
 
         <div class="section-title">Семейный доступ</div>
@@ -540,6 +608,12 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
             <div class="form-group">
                 <label class="form-label">Сумма</label>
                 <input type="number" class="form-input" id="tx-amount" placeholder="0" inputmode="decimal">
+                <div class="chip-row" style="margin:8px 0 0;">
+                    <span class="chip" onclick="addQuickAmount(100)">+100</span>
+                    <span class="chip" onclick="addQuickAmount(500)">+500</span>
+                    <span class="chip" onclick="addQuickAmount(1000)">+1000</span>
+                    <span class="chip" onclick="addQuickAmount(5000)">+5000</span>
+                </div>
             </div>
             <div class="form-group">
                 <label class="form-label">Валюта операции (конвертация по курсу из настроек)</label>
@@ -577,6 +651,7 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                 </select>
             </div>
             <button class="btn-submit" onclick="saveEditTx()">Сохранить</button>
+            <button class="btn-submit btn-danger" style="margin-top: 8px;" onclick="deleteEditTx()">Удалить операцию</button>
         </div>
     </div>
 
@@ -597,6 +672,11 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
             <div class="form-group">
                 <label class="form-label">Название категории</label>
                 <input type="text" class="form-input" id="new-cat-name" placeholder="Например: Обслуживание Авто">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Иконка</label>
+                <div id="cat-emoji-picker" class="emoji-picker"></div>
+                <input type="hidden" id="new-cat-icon" value="💰">
             </div>
             <div class="form-group">
                 <label class="form-label">Плановый лимит на месяц</label>
@@ -627,8 +707,8 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                     <input type="number" class="form-input" id="new-rec-amount" placeholder="299" inputmode="decimal">
                 </div>
                 <div class="form-group" style="flex:1;">
-                    <label class="form-label">День месяца</label>
-                    <input type="number" class="form-input" id="new-rec-day" placeholder="15" min="1" max="28" inputmode="numeric">
+                    <label class="form-label">День месяца (31 = последний день)</label>
+                    <input type="number" class="form-input" id="new-rec-day" placeholder="15" min="1" max="31" inputmode="numeric">
                 </div>
             </div>
             <div class="toggle-row">
@@ -656,8 +736,8 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                     <input type="number" class="form-input" id="edit-rec-amount" inputmode="decimal">
                 </div>
                 <div class="form-group" style="flex:1;">
-                    <label class="form-label">День месяца</label>
-                    <input type="number" class="form-input" id="edit-rec-day" min="1" max="28" inputmode="numeric">
+                    <label class="form-label">День месяца (31 = последний день)</label>
+                    <input type="number" class="form-input" id="edit-rec-day" min="1" max="31" inputmode="numeric">
                 </div>
             </div>
             <div class="toggle-row">
@@ -751,11 +831,25 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
         </div>
     </div>
 
+    <!-- MODAL: Universal input (замена prompt() — в вебвью Telegram prompt ненадёжен) -->
+    <div class="modal" id="input-modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                <h3 id="input-modal-title">Ввод</h3>
+                <i class="fa-solid fa-xmark" onclick="closeInputModal()" style="font-size: 20px; cursor: pointer;"></i>
+            </div>
+            <div class="form-group">
+                <input class="form-input" id="input-modal-field" inputmode="decimal">
+            </div>
+            <button class="btn-submit" onclick="submitInputModal()">Готово</button>
+        </div>
+    </div>
+
     <!-- MODAL: PRO Benefits -->
     <div class="modal" id="pro-modal">
         <div class="modal-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="color: var(--gold);"><i class="fa-solid fa-crown"></i> Подписка Sage PRO</h3>
+                <h3 style="color: var(--gold);"><i class="fa-solid fa-crown"></i> Подписка Считай PRO</h3>
                 <i class="fa-solid fa-xmark" onclick="closeProModal()" style="font-size: 20px; cursor: pointer;"></i>
             </div>
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Разблокируйте весь потенциал:</div>
@@ -774,6 +868,11 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
                 <div style="font-size: 11px; color: var(--text-muted); text-align: center;">Нет звёзд? Купите через @PremiumBot — там работает СберПэй и российские карты, а потом оплатите здесь</div>
                 <button class="btn-submit btn-outline" onclick="closeProModal()">Отмена</button>
             </div>
+            <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px;">
+                <details style="font-size:12px; margin-bottom:6px;"><summary style="cursor:pointer; color:var(--text-muted); font-weight:600;">Что будет после окончания PRO?</summary><div style="margin-top:6px; color:var(--text-muted); line-height:1.5;">Все данные останутся на месте. Отключатся только PRO-функции: напоминания, импорт, экспорт, годовая аналитика, премиум-темы. Продлить можно в один тап.</div></details>
+                <details style="font-size:12px; margin-bottom:6px;"><summary style="cursor:pointer; color:var(--text-muted); font-weight:600;">Как отменить подписку?</summary><div style="margin-top:6px; color:var(--text-muted); line-height:1.5;">Автосписаний нет: PRO оформляется разовым платежом на месяц или год. Просто не продлевайте — подписка закончится сама.</div></details>
+                <details style="font-size:12px;"><summary style="cursor:pointer; color:var(--text-muted); font-weight:600;">PRO действует на всю семью?</summary><div style="margin-top:6px; color:var(--text-muted); line-height:1.5;">Да. Оплачивает любой участник — PRO разблокируется для всех членов семьи, включая будущих.</div></details>
+            </div>
         </div>
     </div>
 
@@ -791,7 +890,7 @@ try { var __t = localStorage.getItem('sage_theme'); if (__t) document.body.setAt
 <script>
 
 /* ============================================================
-   SAGE FINANCE TMA v7 — состояние и инициализация
+   СЧИТАЙ — состояние и инициализация
    ============================================================ */
 const tg = window.Telegram?.WebApp;
 /* ---------- Платформенный слой: единая точка для tg / MAX / Web ---------- */
@@ -807,9 +906,16 @@ const platform = {
     get biometry() { return (tg && tg.BiometricManager) || null; }
 };
 
+function applySystemTelegramTheme() {
+    if (document.body.getAttribute('data-theme') !== 'system') return;
+    try { document.body.setAttribute('data-tg-scheme', tg?.colorScheme || 'dark'); } catch(e) { document.body.setAttribute('data-tg-scheme','dark'); }
+}
+
 if (tg) {
     try {
         platform.ready();
+        applySystemTelegramTheme();
+        tg.onEvent?.('themeChanged', applySystemTelegramTheme);
         if (platform.user) {
             const u = platform.user;
             document.getElementById('user-name').innerText = u.first_name || "Пользователь";
@@ -831,11 +937,21 @@ let tripMode   = localStorage.getItem('sage_trip') === '1';
 let weekLimit  = Number(localStorage.getItem('sage_weeklimit')) || 0;
 let txSearchQuery = '';
 let streakMap  = JSON.parse(localStorage.getItem('sage_streak')) || {};
+let categoryIcons = JSON.parse(localStorage.getItem('sage_cat_icons')) || {
+    'Еда и продукты':'🛒','Жилье и КУ':'🏠','Транспорт':'🚌','Развлечения':'🎬','Авто и Бензин':'🚗','Питомцы':'🐾','Подписки':'📺',
+    'Здоровье':'❤️','Образование':'🎓','Путешествия':'✈️','Покупки':'🛍️','Подарки':'🎁','Одежда':'👕','Спорт':'🏋️','Связь':'📱',
+    'Зарплата':'💼','Фриланс':'💻','Инвестиции':'📈','Кэшбэк':'💸','Прочие доходы':'💰'
+};
 let catTags    = JSON.parse(localStorage.getItem('sage_cat_tags')) || {
     'Жилье и КУ':'need','Еда и продукты':'need','Транспорт':'need','Питомцы':'need','Здоровье':'need',
     'Развлечения':'want','Авто и Бензин':'want','Подписки':'want'
 };
-let selectedMonth = 'Сентябрь';
+/* Ключ месяца вида "2026-09": в транзакциях поле mk. Без года данные
+   разных лет смешивались (аудит, п.2) */
+function monthKeyOf(y, mIdx) { return y + '-' + String(mIdx + 1).padStart(2, '0'); }
+function prevMonthKey(k) { const y = Number(k.slice(0, 4)), m = Number(k.slice(5, 7)); return m === 1 ? (y - 1) + '-12' : y + '-' + String(m - 1).padStart(2, '0'); }
+function monthNameOf(k) { return allMonths[Number(k.slice(5, 7)) - 1] || k; }
+let selectedMonth = monthKeyOf(new Date().getFullYear(), new Date().getMonth());
 
 const allMonths = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const MONTH_NUM = { 'Январь':0,'Февраль':1,'Март':2,'Апрель':3,'Май':4,'Июнь':5,'Июль':6,'Август':7,'Сентябрь':8,'Октябрь':9,'Ноябрь':10,'Декабрь':11 };
@@ -863,6 +979,36 @@ let recurring = JSON.parse(localStorage.getItem('sage_rec')) || [];
 let transactions = JSON.parse(localStorage.getItem('sage_txs')) || [];
 
 let chartInstance = null, yearlyChartInstance = null, currentSlide = 0;
+
+/* ---------- Миграция старых данных (месяц без года) ----------
+   Транзакциям без mk привязываем текущий год по названию месяца,
+   либо год из ts, если он есть. Ключи sage_rec_applied "2026-8"
+   приводим к "2026-08" и обрезаем до последних 12 месяцев. */
+function migrateMonthKeys() {
+    const now = new Date();
+    let changed = false;
+    transactions = (transactions || []).map(t => {
+        if (t && !t.mk) {
+            if (t.ts) { const d = new Date(t.ts); t.mk = monthKeyOf(d.getFullYear(), d.getMonth()); }
+            else if (t.month && MONTH_NUM[t.month] !== undefined) { t.mk = monthKeyOf(now.getFullYear(), MONTH_NUM[t.month]); }
+            else { t.mk = selectedMonth; }
+            changed = true;
+        }
+        return t;
+    });
+    if (changed) localStorage.setItem('sage_txs', JSON.stringify(transactions));
+    try {
+        const applied = JSON.parse(localStorage.getItem('sage_rec_applied')) || {};
+        let ac = false;
+        Object.keys(applied).forEach(k => {
+            const m = k.match(/^(\d{4})-(\d{1,2})$/);
+            if (m) { const nk = monthKeyOf(Number(m[1]), Number(m[2]) - 1); if (nk !== k) { applied[nk] = applied[k]; delete applied[k]; ac = true; } }
+        });
+        const keys = Object.keys(applied).sort();
+        if (keys.length > 12) { keys.slice(0, keys.length - 12).forEach(k => { delete applied[k]; ac = true; }); }
+        if (ac) localStorage.setItem('sage_rec_applied', JSON.stringify(applied));
+    } catch (e) {}
+}
 
 /* ---------- Хелперы ---------- */
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 }); }
@@ -896,6 +1042,7 @@ function saveAll() {
     localStorage.setItem('sage_rec', JSON.stringify(recurring));
     localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
     localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories));
+    localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons));
     localStorage.setItem('sage_rates', JSON.stringify(rates));
     try { cloudSave(); } catch (e) {}
 }
@@ -905,12 +1052,11 @@ function initMonthSelector() {
     const sel = document.getElementById('month-selector');
     sel.innerHTML = '';
     const nowY = new Date();
-    const curMonthName = allMonths[nowY.getMonth()];
     for (let y = nowY.getFullYear() - 1; y <= nowY.getFullYear() + 1; y++) {
-        allMonths.forEach(m => {
+        allMonths.forEach((m, i) => {
             const opt = document.createElement('option');
-            opt.value = m; opt.innerText = `${m} ${y}`;
-            if (m === curMonthName && y === nowY.getFullYear()) opt.selected = true;
+            opt.value = monthKeyOf(y, i); opt.innerText = `${m} ${y}`;
+            if (y === nowY.getFullYear() && i === nowY.getMonth()) opt.selected = true;
             sel.appendChild(opt);
         });
     }
@@ -919,6 +1065,37 @@ function initMonthSelector() {
 document.getElementById('month-selector').onchange = (e) => {
     selectedMonth = e.target.value; triggerHaptic(); renderUI();
 };
+
+/* ---------- Быстрая запись внутри Mini App ---------- */
+function parseQuickEntry(text) {
+    const raw=String(text||'').trim();
+    const m=raw.match(/^(?:([+-]?\d[\d\s.,]*)\s+(.+)|(?:зп|зарплата|зарплат[аы]?)\s+([+-]?\d[\d\s.,]*))$/i);
+    if(!m) return null;
+    let amountText=m[1] || m[3];
+    let label=(m[2] || 'Зарплата').trim();
+    const amount=Math.abs(Number(amountText.replace(/\s/g,'').replace(',','.')));
+    if(!amount || amount>1e12) return null;
+    const isIncome=!m[2] || /^(зп|зарплата|зарплат[аы]?)$/i.test(label);
+    const type=isIncome?'income':'expense';
+    const category=isIncome ? (incomeCategories.find(c=>/зарплат/i.test(c)) || incomeCategories[0] || 'Зарплата') : guessCategory(label, {expenseCategories});
+    return {type, amount, category};
+}
+function quickAddFromApp() {
+    const input=document.getElementById('quick-entry-input'); const result=document.getElementById('quick-entry-result');
+    const parsed=parseQuickEntry(input?.value||'');
+    if(!parsed) { if(result){result.className='quick-result-error';result.innerText='Не понял запись. Пример: «350 кофе» или «зп 80000»';} return; }
+    const ts=Date.now();
+    const base=convertToBase(parsed.amount,currentCurrency);
+    transactions.unshift({id:ts,type:parsed.type,category:parsed.category,amount:parsed.amount,currency:currentCurrency,amountBase:base,month:monthNameOf(selectedMonth),mk:selectedMonth,date:'Быстрая запись',ts});
+    if(parsed.type==='income') applyAutoSavings(base);
+    saveAll(); localStorage.setItem('sage_onboarded','1'); logEvent('tx_add'); renderUI();
+    if(result){result.className='quick-result-ok';result.innerText=`✓ ${parsed.type==='income'?'+':'-'}${fmt(parsed.amount)} ${currentCurrency} · ${catEmoji(parsed.category,parsed.type)} ${parsed.category}`;}
+    input.value='';
+}
+const quickEntryBtn=document.getElementById('quick-entry-btn');
+const quickEntryInput=document.getElementById('quick-entry-input');
+quickEntryBtn?.addEventListener('click',quickAddFromApp);
+quickEntryInput?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();quickAddFromApp();}});
 
 /* ---------- Навигация ---------- */
 function switchTab(tabId, el) {
@@ -943,6 +1120,7 @@ function setTheme(themeName, el) {
     triggerHaptic();
     if ((themeName === 'neon' || themeName === 'ocean') && !isPro) { openProModal(); return; }
     document.body.setAttribute('data-theme', themeName);
+    if (themeName === 'system') applySystemTelegramTheme();
     document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
     if (el) el.classList.add('active');
     localStorage.setItem('sage_theme', themeName);
@@ -964,6 +1142,7 @@ document.getElementById('privacy-toggle').onclick = togglePrivacy;
 
 /* ---------- PIN-код ---------- */
 let pinBuffer = '', pinMode = 'check'; // check | set | confirm
+let pinFails = 0, pinLockUntil = 0; // троттлинг: 5 ошибок = пауза 30 с
 let pinTemp = '';
 
 async function hashPin(p) {
@@ -993,10 +1172,39 @@ function updatePinUI() {
     document.getElementById('pin-toggle').classList.toggle('on', !!pinCode);
     document.getElementById('pin-status').innerText = pinCode ? 'Установлен' : 'Не установлен';
 }
+let bioInited = false;
 function showPinScreen(title) {
     document.getElementById('pin-title').innerText = title;
     document.getElementById('pin-overlay').classList.add('show');
     updatePinDots();
+    if (pinMode === 'check') initBiometryIfNeeded(); // сразу предлагаем скан, если биометрия доступна
+}
+function initBiometryIfNeeded() {
+    const bio = platform.biometry;
+    const statusEl = document.getElementById('bio-status');
+    if (!bio) { statusEl.innerText = 'Недоступна на этом устройстве — используйте PIN'; return; }
+    if (bioInited) {
+        if (bio.isBiometricAvailable) tryAutoBiometricAuth();
+        return;
+    }
+    try {
+        bio.init(() => {
+            bioInited = true;
+            statusEl.innerText = bio.isBiometricAvailable ? 'Доступна: вход по отпечатку или лицу' : 'Недоступна на этом устройстве — используйте PIN';
+            tryAutoBiometricAuth();
+        });
+    } catch (e) { statusEl.innerText = 'Недоступна на этом устройстве — используйте PIN'; }
+}
+function tryAutoBiometricAuth() {
+    const bio = platform.biometry;
+    if (!bio || !bio.isBiometricAvailable) return;
+    if (pinMode !== 'check') return;
+    if (!document.getElementById('pin-overlay').classList.contains('show')) return;
+    try {
+        bio.authenticate({ reason: 'Разблокировка Считай' }, (success) => {
+            if (success) { platform.haptic('success'); hidePinScreen(); }
+        });
+    } catch (e) {}
 }
 function hidePinScreen() {
     document.getElementById('pin-overlay').classList.remove('show');
@@ -1015,8 +1223,23 @@ function pinPress(k) {
 }
 async function handlePinComplete() {
     if (pinMode === 'check') {
-        if (pinCode && /^\d{4}$/.test(pinBuffer) && (await hashPin(pinBuffer)) === pinCode) { hidePinScreen(); }
-        else {
+        if (Date.now() < pinLockUntil) { // пауза после серии неудачных попыток
+            const dots = document.getElementById('pin-dots');
+            dots.classList.add('pin-shake');
+            setTimeout(() => { dots.classList.remove('pin-shake'); pinBuffer = ''; updatePinDots(); }, 400);
+            return;
+        }
+        if (pinCode && /^\d{4}$/.test(pinBuffer) && (await hashPin(pinBuffer)) === pinCode) {
+            pinFails = 0;
+            hidePinScreen();
+        } else {
+            pinFails++;
+            if (pinFails >= 5) {
+                pinFails = 0;
+                pinLockUntil = Date.now() + 30000;
+                document.getElementById('pin-title').innerText = 'Слишком много попыток. Подождите 30 секунд';
+                setTimeout(() => { if (pinMode === 'check') document.getElementById('pin-title').innerText = 'Введите PIN-код'; }, 30000);
+            }
             const dots = document.getElementById('pin-dots');
             dots.classList.add('pin-shake');
             setTimeout(() => { dots.classList.remove('pin-shake'); pinBuffer = ''; updatePinDots(); }, 400);
@@ -1060,7 +1283,7 @@ function saveRates() {
    ============================================================ */
 function getMonthKey() {
     const d = new Date();
-    return `${d.getFullYear()}-${d.getMonth()}`;
+    return monthKeyOf(d.getFullYear(), d.getMonth());
 }
 function autoApplyRecurring() {
     // Автоматически заносим постоянные платежи в текущий реальный месяц,
@@ -1068,12 +1291,14 @@ function autoApplyRecurring() {
     const applied = JSON.parse(localStorage.getItem('sage_rec_applied')) || {};
     const key = getMonthKey();
     const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     recurring.forEach(r => {
-        if (now.getDate() >= r.day && !(applied[key] || []).includes(r.id)) {
+        const effDay = r.day === 31 ? lastDay : Math.min(r.day, lastDay); // 31 = «последний день месяца»
+        if (now.getDate() >= effDay && !(applied[key] || []).includes(r.id)) {
             transactions.unshift({
                 id: Date.now() + r.id, type: 'expense', category: r.category,
                 amount: r.amount, currency: currentCurrency, amountBase: r.amount,
-                month: allMonths[now.getMonth()], date: `Авто: ${r.name}`, ts: Date.now()
+                month: monthNameOf(key), mk: key, date: `Авто: ${r.name}`, ts: Date.now()
             });
             applied[key] = applied[key] || [];
             applied[key].push(r.id);
@@ -1084,10 +1309,8 @@ function autoApplyRecurring() {
 }
 function isRecurringAppliedInSelected(r) {
     // Отображаем статус платежа в выбранном в селекторе месяце
-    const monthIndex = MONTH_NUM[selectedMonth];
     const applied = JSON.parse(localStorage.getItem('sage_rec_applied')) || {};
-    const key = `${new Date().getFullYear()}-${monthIndex}`;
-    return (applied[key] || []).includes(r.id);
+    return (applied[selectedMonth] || []).includes(r.id);
 }
 function applyRecurringManually(id) {
     const r = recurring.find(x => x.id === id);
@@ -1095,10 +1318,10 @@ function applyRecurringManually(id) {
     transactions.unshift({
         id: Date.now(), type: 'expense', category: r.category,
         amount: r.amount, currency: currentCurrency, amountBase: r.amount,
-        month: selectedMonth, date: `Авто: ${r.name}`, ts: Date.now()
+        month: monthNameOf(selectedMonth), mk: selectedMonth, date: `Авто: ${r.name}`, ts: Date.now()
     });
     const applied = JSON.parse(localStorage.getItem('sage_rec_applied')) || {};
-    const key = `${new Date().getFullYear()}-${MONTH_NUM[selectedMonth]}`;
+    const key = selectedMonth;
     applied[key] = applied[key] || [];
     applied[key].push(r.id);
     localStorage.setItem('sage_rec_applied', JSON.stringify(applied));
@@ -1118,14 +1341,14 @@ function renderRecurringList() {
                 <div class="tx-icon"><i class="fa-solid fa-rotate"></i></div>
                 <div>
                     <div style="font-weight:bold; font-size:13px;">${esc(r.name)} ${r.remind ? '<i class="fa-solid fa-bell" style="font-size:10px;color:var(--gold);"></i>' : ''}</div>
-                    <div style="font-size:10px; color:var(--text-muted);">каждый ${r.day}-е · ${esc(r.category)}</div>
+                    <div style="font-size:10px; color:var(--text-muted);">${r.day === 31 ? 'в последний день месяца' : `каждое ${r.day}-е число`} · ${esc(r.category)}</div>
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
                 <span class="hideable" style="font-weight:bold; font-size:13px;">${fmt(r.amount)} ${currentCurrency}</span>
                 ${applied
                     ? '<span class="tag green">добавлено</span>'
-                    : `<button class="btn-small btn-outline" data-rec-apply="${r.id}">+ в ${selectedMonth.slice(0,3)}</button>`}
+                    : `<button class="btn-small btn-outline" data-rec-apply="${r.id}">+ в ${monthNameOf(selectedMonth).slice(0, 3)}</button>`}
             </div>`;
         const applyBtn = row.querySelector('[data-rec-apply]');
         if (applyBtn) applyBtn.addEventListener('click', (e) => { e.stopPropagation(); applyRecurringManually(r.id); });
@@ -1137,7 +1360,13 @@ function checkReminders() {
     // Напоминания за 1–2 дня до платежа (проверка при открытии приложения)
     const banner = document.getElementById('reminder-banner');
     const now = new Date();
-    const soon = recurring.filter(r => r.remind && (r.day - now.getDate() === 1 || r.day - now.getDate() === 2));
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const soon = recurring.filter(r => {
+        if (!r.remind) return false;
+        const eff = r.day === 31 ? lastDay : Math.min(r.day, lastDay);
+        const diff = eff - now.getDate();
+        return diff === 1 || diff === 2;
+    });
     if (soon.length) {
         document.getElementById('reminder-text').innerText =
             `Скоро спишутся: ${soon.map(r => `${r.name} (${fmt(r.amount)} ${currentCurrency}, ${r.day}-е)`).join('; ')}`;
@@ -1153,7 +1382,7 @@ function openAddRecModal() {
     const sel = document.getElementById('new-rec-category');
     sel.innerHTML = '';
     Object.keys(expenseCategories).forEach(c => {
-        const o = document.createElement('option'); o.value = c; o.innerText = c; sel.appendChild(o);
+        const o = document.createElement('option'); o.value = c; o.innerText = (categoryIcons[c] || '💳') + ' ' + c; sel.appendChild(o);
     });
     document.getElementById('rec-modal').style.display = 'flex';
 }
@@ -1162,7 +1391,7 @@ function saveNewRecurring() {
     const name = document.getElementById('new-rec-name').value.trim();
     const category = document.getElementById('new-rec-category').value;
     const amount = Number(document.getElementById('new-rec-amount').value);
-    const day = Math.min(28, Math.max(1, Number(document.getElementById('new-rec-day').value) || 1));
+    const day = Math.min(31, Math.max(1, Number(document.getElementById('new-rec-day').value) || 1));
     if (!name || !amount) return uiAlert('Заполните название и сумму');
     if (!isPro && recurring.length >= 3) { openProModal(`🔄 Бесплатная версия: до 3 постоянных платежей, у вас уже ${recurring.length}. PRO открывает безлимит.`); return; }
     const wantRemind = document.getElementById('new-rec-remind').classList.contains('on');
@@ -1191,7 +1420,7 @@ function saveEditRecurring() {
     if (!r) return;
     r.name = document.getElementById('edit-rec-name').value.trim() || r.name;
     r.amount = Number(document.getElementById('edit-rec-amount').value) || r.amount;
-    r.day = Math.min(28, Math.max(1, Number(document.getElementById('edit-rec-day').value) || r.day));
+    r.day = Math.min(31, Math.max(1, Number(document.getElementById('edit-rec-day').value) || r.day));
     r.remind = document.getElementById('edit-rec-remind').classList.contains('on');
     saveAll(); closeEditRecModal(); renderUI();
 }
@@ -1226,11 +1455,12 @@ function saveNewDeposit() {
 function editDepositField(id, field) {
     const d = deposits.find(x => x.id === id);
     if (!d) return;
-    const val = prompt(field === 'amount' ? 'Новая сумма вклада:' : 'Новая ставка % годовых:', field === 'amount' ? d.amount : d.rate);
-    if (val === null) return;
-    if (field === 'amount') d.amount = Number(val) || d.amount;
-    else d.rate = Number(val) || d.rate;
-    saveAll(); renderUI();
+    openInputModal(field === 'amount' ? 'Новая сумма вклада' : 'Новая ставка, % годовых', field === 'amount' ? d.amount : d.rate, (val) => {
+        if (val === null || String(val).trim() === '') return;
+        if (field === 'amount') d.amount = Number(val) || d.amount;
+        else d.rate = Number(val) || d.rate;
+        saveAll(); renderUI();
+    }, 'number');
 }
 function deleteDeposit(id) {
     uiConfirm('Закрыть вклад и удалить его из списка?', () => {
@@ -1327,7 +1557,7 @@ function renderDebtsList() {
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
                 <span class="hideable" style="font-weight:bold; font-size:13px; color:${d.direction === 'owed' ? 'var(--accent-light)' : '#FFA8A8'};">${fmt(d.amount)} ${currentCurrency}</span>
-                <button class="btn-small ${d.repaid ? 'btn-outline' : ''}" style="font-size:10px;" data-debt-toggle="${d.id}">${d.repaid ? 'вернул' : 'вернул?'}</button>
+                <button class="btn-small ${d.repaid ? 'btn-outline' : ''}" style="font-size:10px;" data-debt-toggle="${d.id}" title="Отметить возврат долга">${d.repaid ? 'вернул ✓' : 'отметить возврат'}</button>
                 <i class="fa-solid fa-trash" style="font-size:11px; color:var(--danger); cursor:pointer;" data-debt-del="${d.id}"></i>
             </div>`;
         row.querySelector('[data-debt-toggle]').addEventListener('click', () => toggleDebtRepaid(d.id));
@@ -1377,12 +1607,12 @@ document.getElementById('csv-import-input').addEventListener('change', function 
             transactions.unshift({
                 id: Date.now() + i, type, category,
                 amount: absAmount, currency: currentCurrency, amountBase: absAmount,
-                month: selectedMonth, date: `импорт: ${parts[0] || ''}`
+                month: monthNameOf(selectedMonth), mk: selectedMonth, date: `импорт: ${parts[0] || ''}`
             });
             added++;
         });
         saveAll(); renderUI();
-        document.getElementById('import-result').innerText = `✅ Импортировано ${added} ${plural(added, 'операция', 'операции', 'операций')} (в ${selectedMonth})`;
+        document.getElementById('import-result').innerText = `✅ Импортировано ${added} ${plural(added, 'операция', 'операции', 'операций')} (в ${monthNameOf(selectedMonth)})`;
     };
     reader.readAsText(file, 'utf-8');
     e.target.value = '';
@@ -1395,25 +1625,30 @@ function downloadFile(content, filename, mime) {
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
 }
+function csvCell(v) {
+    v = String(v == null ? '' : v);
+    // П.9 аудита: защита от CSV-инъекции (=HYPERLINK(...) и т.п. исполнялись бы в Excel)
+    return /^[=+\-@]/.test(v) ? "'" + v : v;
+}
 function exportMonthCSV() {
     if (!proGate()) return;
-    const mTx = transactions.filter(t => t.month === selectedMonth);
+    const mTx = transactions.filter(t => t.mk === selectedMonth);
     let csv = 'Тип;Категория;Сумма;Валюта;Сумма в базовой;Дата\n';
     mTx.forEach(t => {
-        csv += `${t.type};${t.category};${t.amount};${t.currency || '₽'};${Math.round(t.amountBase || t.amount)};${t.date}\n`;
+        csv += [t.type, t.category, t.amount, t.currency || '₽', Math.round(t.amountBase || t.amount), t.date].map(csvCell).join(';') + '\n';
     });
     const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amountBase, 0);
     const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amountBase, 0);
     csv += `\nИТОГО;Доходы;;${Math.round(inc)}\nИТОГО;Расходы;;${Math.round(exp)}\nИТОГО;Остаток;;${Math.round(inc - exp)}\n`;
-    downloadFile('\ufeff' + csv, `sage-report-${selectedMonth}-2026.csv`, 'text/csv;charset=utf-8');
+    downloadFile('\ufeff' + csv, `schitay-report-${selectedMonth}.csv`, 'text/csv;charset=utf-8');
 }
 function downloadBackup() {
     const data = {
-        app: 'Sage Finance TMA', version: 7, exportedAt: new Date().toISOString(),
+        app: 'Считай Mini App', version: 8, exportedAt: new Date().toISOString(),
         isPro, currency: currentCurrency, rates,
-        expenseCategories, incomeCategories, transactions, goals, deposits, debts, recurring
+        expenseCategories, incomeCategories, categoryIcons, transactions, goals, deposits, debts, recurring
     };
-    downloadFile(JSON.stringify(data, null, 2), `sage-backup-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
+    downloadFile(JSON.stringify(data, null, 2), `schitay-backup-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
 }
 document.getElementById('restore-input').addEventListener('change', function (e) {
     const file = e.target.files[0];
@@ -1422,21 +1657,28 @@ document.getElementById('restore-input').addEventListener('change', function (e)
     reader.onload = function (ev) {
         try {
             const data = JSON.parse(ev.target.result);
-            if (!data.transactions) throw new Error('bad file');
-            if (!window.confirm(`Восстановить бэкап от ${data.exportedAt ? new Date(data.exportedAt).toLocaleString('ru-RU') : 'неизвестной даты'}? Текущие данные будут заменены.`)) return;
-            transactions = data.transactions || [];
-            goals = data.goals || [];
-            deposits = data.deposits || [];
-            debts = data.debts || [];
-            recurring = data.recurring || [];
-            expenseCategories = data.expenseCategories || expenseCategories;
-            incomeCategories = data.incomeCategories || incomeCategories;
-            rates = data.rates || rates;
-            if (data.currency) { currentCurrency = data.currency; localStorage.setItem('sage_currency', currentCurrency); }
-            saveAll();
-            localStorage.setItem('sage_rec_applied', '{}');
-            uiAlert('✅ Данные восстановлены из бэкапа');
-            location.reload();
+            if (!data || !Array.isArray(data.transactions)) throw new Error('bad file');
+            // П.16 аудита: бэкап с expenseCategories-массивом (или другими кривыми типами) ломал рендер
+            if (data.expenseCategories && (typeof data.expenseCategories !== 'object' || Array.isArray(data.expenseCategories))) delete data.expenseCategories;
+            if (data.incomeCategories && !Array.isArray(data.incomeCategories)) delete data.incomeCategories;
+            const doRestore = () => {
+                transactions = Array.isArray(data.transactions) ? data.transactions : [];
+                goals = Array.isArray(data.goals) ? data.goals : [];
+                deposits = Array.isArray(data.deposits) ? data.deposits : [];
+                debts = Array.isArray(data.debts) ? data.debts : [];
+                recurring = Array.isArray(data.recurring) ? data.recurring : [];
+                if (data.expenseCategories) expenseCategories = data.expenseCategories;
+                if (data.incomeCategories) incomeCategories = data.incomeCategories;
+                if (data.categoryIcons && typeof data.categoryIcons === 'object' && !Array.isArray(data.categoryIcons)) { categoryIcons = data.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
+                if (data.rates && typeof data.rates === 'object' && !Array.isArray(data.rates)) rates = data.rates;
+                if (data.currency) { currentCurrency = data.currency; localStorage.setItem('sage_currency', currentCurrency); }
+                migrateMonthKeys();
+                saveAll();
+                localStorage.setItem('sage_rec_applied', '{}');
+                uiAlert('✅ Данные восстановлены из бэкапа');
+                location.reload();
+            };
+            uiConfirm(`Восстановить бэкап от ${data.exportedAt ? new Date(data.exportedAt).toLocaleString('ru-RU') : 'неизвестной даты'}? Текущие данные будут заменены.`, doRestore);
         } catch (err) {
             uiAlert('❌ Не удалось прочитать файл бэкапа');
         }
@@ -1456,7 +1698,13 @@ function openProModal(reason) {
     document.getElementById('pro-modal').style.display = 'flex';
 }
 function closeProModal() { document.getElementById('pro-modal').style.display = 'none'; }
-function openAddCatModal() { triggerHaptic(); document.getElementById('cat-modal').style.display = 'flex'; }
+const CAT_EMOJIS = ['🛒','🍔','☕','🏠','🚌','🚗','⛽','🐾','❤️','💊','🎬','🎮','📺','✈️','🛍️','🎁','👕','🎓','🏋️','📱','💼','💻','📈','💸','💰','🧾','🏦','🔧','🐶','👶','🎵','📚','🏖️','💳'];
+function renderCatEmojiPicker(selected='💰') {
+    const p=document.getElementById('cat-emoji-picker'); if(!p) return;
+    p.innerHTML='';
+    CAT_EMOJIS.forEach(em=>{ const b=document.createElement('button'); b.type='button'; b.className='emoji-btn'+(em===selected?' active':''); b.textContent=em; b.onclick=()=>{ document.getElementById('new-cat-icon').value=em; p.querySelectorAll('.emoji-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }; p.appendChild(b); });
+}
+function openAddCatModal() { triggerHaptic(); renderCatEmojiPicker('💰'); document.getElementById('cat-modal').style.display = 'flex'; }
 function closeAddCatModal() { document.getElementById('cat-modal').style.display = 'none'; }
 function openAddGoalModal() { triggerHaptic(); document.getElementById('goal-modal').style.display = 'flex'; }
 function closeAddGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
@@ -1466,6 +1714,8 @@ function saveNewCategory() {
     const type = document.getElementById('new-cat-type').value;
     const limit = Number(document.getElementById('new-cat-limit').value) || 0;
     if (!name) return uiAlert("Введите название категории");
+    const icon = document.getElementById('new-cat-icon').value || '💰';
+    categoryIcons[name] = icon;
     if (type === 'expense') {
         expenseCategories[name] = limit;
         localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
@@ -1473,6 +1723,8 @@ function saveNewCategory() {
         if (!incomeCategories.includes(name)) incomeCategories.push(name);
         localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories));
     }
+    localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons));
+    cloudSave();
     document.getElementById('new-cat-name').value = '';
     document.getElementById('new-cat-limit').value = '';
     closeAddCatModal(); renderUI();
@@ -1480,6 +1732,7 @@ function saveNewCategory() {
 function deleteCategory(catName) {
     uiConfirm(`Удалить категорию "${catName}"?`, () => {
         delete expenseCategories[catName];
+        delete categoryIcons[catName];
         saveAll();
         renderUI();
     });
@@ -1502,8 +1755,8 @@ async function clearAllData() {
             try {
                 await fetch(API_URL + '/sync', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ initData: platform.initData, version: 0,
-                        state: { transactions: [], goals: [], deposits: [], debts: [], recurring: [] } })
+                    body: JSON.stringify({ initData: platform.initData, version: cloudVersion,
+                        state: { transactions: [], goals: [], deposits: [], debts: [], recurring: [], expenseCategories: {}, incomeCategories: [], categoryIcons: {} } })
                 });
             } catch (e) {}
         }
@@ -1515,6 +1768,11 @@ async function clearAllData() {
 /* ============================================================
    ОПЕРАЦИИ
    ============================================================ */
+function addQuickAmount(v) {
+    const f = document.getElementById('tx-amount');
+    f.value = (Number(f.value) || 0) + v;
+    triggerHaptic();
+}
 function onTxTypeChange() {
     const type = document.getElementById('tx-type').value;
     const goalGroup = document.getElementById('goal-select-group');
@@ -1530,12 +1788,12 @@ function onTxTypeChange() {
         catSelect.innerHTML = '';
         if (type === 'expense') {
             Object.keys(expenseCategories).forEach(c => {
-                const opt = document.createElement('option'); opt.value = c; opt.innerText = c;
+                const opt = document.createElement('option'); opt.value = c; opt.innerText = (categoryIcons[c] || '💳') + ' ' + c;
                 catSelect.appendChild(opt);
             });
         } else {
             incomeCategories.forEach(c => {
-                const opt = document.createElement('option'); opt.value = c; opt.innerText = c;
+                const opt = document.createElement('option'); opt.value = c; opt.innerText = (categoryIcons[c] || '💳') + ' ' + c;
                 catSelect.appendChild(opt);
             });
         }
@@ -1563,6 +1821,26 @@ function setAnalyticsSlide(idx) {
     document.getElementById('carousel-title').innerText = idx === 0 ? 'Структура трат (Месяц)' : 'Годовая аналитика (12 мес)';
 }
 
+function renderDashboardPlanner(income, expense, savings) {
+    const now=new Date(); const curKey=monthKeyOf(now.getFullYear(),now.getMonth());
+    const isCurrent=selectedMonth===curKey;
+    const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+    const daysLeft=isCurrent?Math.max(1,daysInMonth-now.getDate()+1):0;
+    const upcoming=(recurring||[]).map(r=>{
+        const d=new Date(Number(selectedMonth.slice(0,4)),Number(selectedMonth.slice(5,7))-1,Math.min(r.day, new Date(Number(selectedMonth.slice(0,4)),Number(selectedMonth.slice(5,7)),0).getDate()));
+        return {...r, _date:d};
+    }).filter(r=>r._date>=new Date(now.getFullYear(),now.getMonth(),now.getDate()) || !isCurrent).sort((a,b)=>a._date-b._date).slice(0,3);
+    const committed=upcoming.reduce((sum,r)=>sum+Number(r.amount||0),0);
+    const currentBalance=income-expense-savings;
+    const free=isCurrent ? Math.max(0,currentBalance-committed) : currentBalance;
+    const f=document.getElementById('free-to-spend'); if(f) f.innerText=fmt(free)+' '+currentCurrency;
+    const hint=document.getElementById('free-to-spend-hint'); if(hint) hint.innerText=isCurrent ? (daysLeft>1?`≈ ${fmt(free/daysLeft)} ${currentCurrency} в день до конца месяца`:'Последний день месяца') : 'Свободный остаток выбранного месяца';
+    const box=document.getElementById('dashboard-upcoming-payments'); if(!box)return; box.innerHTML='';
+    if(!recurring.length){box.innerHTML='<div style="font-size:11px;color:var(--text-muted);">Добавьте постоянные платежи — аренду, подписки, кредит или ЖКХ.</div>';return;}
+    if(!upcoming.length){box.innerHTML='<div style="font-size:11px;color:var(--text-muted);">Ближайших платежей в выбранном месяце нет.</div>';return;}
+    upcoming.forEach(r=>{const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border);';row.innerHTML=`<div><div style="font-size:12px;font-weight:700;">${esc(r.name)}</div><div style="font-size:10px;color:var(--text-muted);">${r._date.getDate()} ${monthNameOf(selectedMonth).slice(0,3)}</div></div><div class="hideable" style="font-size:12px;font-weight:800;">${fmt(r.amount)} ${currentCurrency}</div>`;box.appendChild(row);});
+}
+
 function renderUI() {
     if (isPro) {
         document.body.classList.add('is-pro');
@@ -1580,7 +1858,7 @@ function renderUI() {
         document.getElementById('pro-cta-btn').style.opacity = 1;
     }
 
-    const monthTxs = transactions.filter(t => t.month === selectedMonth && (!txSearchQuery || (t.category + ' ' + t.date).toLowerCase().includes(txSearchQuery)));
+    const monthTxs = transactions.filter(t => t.mk === selectedMonth && (!txSearchQuery || (t.category + ' ' + t.date).toLowerCase().includes(txSearchQuery)));
     let income = 0, expense = 0, savings = 0;
     const catTotals = {};
 
@@ -1599,7 +1877,7 @@ function renderUI() {
         item.className = 'tx-item';
         item.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="tx-icon"><i class="fa-solid ${catIcon(tx.category, tx.type)}"></i></div>
+                <div class="tx-icon" style="${tx.type === 'expense' ? `color:${(catTags[tx.category] || 'want') === 'need' ? 'var(--accent-sage)' : 'var(--gold)'};` : ''}"><span class="category-emoji">${catEmoji(tx.category, tx.type)}</span></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
                     <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}</div>
@@ -1618,8 +1896,16 @@ function renderUI() {
         item.addEventListener('touchstart', startPress);
         item.addEventListener('touchend', () => clearTimeout(pressTimer));
         item.addEventListener('touchmove', () => clearTimeout(pressTimer));
+        // мышиный аналог long-press — иначе на десктопе удалить операцию невозможно
+        item.addEventListener('mousedown', startPress);
+        item.addEventListener('mouseup', () => clearTimeout(pressTimer));
+        item.addEventListener('mouseleave', () => clearTimeout(pressTimer));
         item.addEventListener('click', () => { if (longPressFired) { longPressFired = false; return; } openEditTx(tx.id); });
     });
+
+    if (!monthTxs.length) {
+        txListEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Операций нет — нажмите «+», чтобы добавить. <br>Зажмите операцию (или удерживайте мышью), чтобы удалить.</div>';
+    }
 
     document.getElementById('total-income').innerText = `${fmt(income)} ${currentCurrency}`;
     document.getElementById('total-expense').innerText = `${fmt(expense)} ${currentCurrency}`;
@@ -1627,11 +1913,31 @@ function renderUI() {
     document.getElementById('total-balance').innerText = `${fmt(income - expense - savings)} ${currentCurrency}`;
 
     const nowD = new Date();
-    const curMonthName = allMonths[nowD.getMonth()];
-    const elapsed = (selectedMonth === curMonthName) ? Math.max(1, nowD.getDate()) : 30;
+    const curKey = monthKeyOf(nowD.getFullYear(), nowD.getMonth());
+    const elapsed = (selectedMonth === curKey) ? Math.max(1, nowD.getDate()) : 30;
+    // микро-тренды к прошлому месяцу (п.18 аудита)
+    const pKey = prevMonthKey(selectedMonth);
+    let pInc = 0, pExp = 0;
+    transactions.forEach(t => {
+        if (t.mk !== pKey) return;
+        const b = t.amountBase !== undefined ? t.amountBase : t.amount;
+        if (t.type === 'income') pInc += b;
+        if (t.type === 'expense') pExp += b;
+    });
+    const trEl = (id, cur, prev, invert) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!prev) { el.innerText = ''; return; }
+        const d = Math.round((cur - prev) / prev * 100);
+        el.innerText = (d >= 0 ? '↑ ' : '↓ ') + Math.abs(d) + '% к прошлому мес.';
+        el.style.color = (d >= 0 ? !invert : invert) ? 'var(--accent-light)' : 'var(--danger)';
+    };
+    trEl('trend-income', income, pInc, false);
+    trEl('trend-expense', expense, pExp, true);
     const avgDaily = expense / elapsed;
     document.getElementById('avg-daily').innerText = `${fmt(avgDaily)} ${currentCurrency}`;
     document.getElementById('forecast-expense').innerText = `${fmt(avgDaily * 30)} ${currentCurrency}`;
+    renderDashboardPlanner(income, expense, savings);
 
     renderBudgetPlanner(catTotals);
     renderGoalsList();
@@ -1646,7 +1952,8 @@ function renderUI() {
     renderInsights();
     renderOnboarding();
     applyTripUI();
-    if (privacyOn) document.querySelectorAll('.hideable').forEach(el => el.innerText = '••••');
+    // Режим приватности — только CSS-blur (п.14 аудита): подмена innerText
+    // необратимо портила контент (chart-total-label) до следующего рендера.
 }
 
 function chartMuted() {
@@ -1672,6 +1979,14 @@ const CAT_ICONS = [
     ['страхов', 'fa-shield-halved'], ['налог', 'fa-file-invoice'], ['кредит', 'fa-credit-card'], ['ипотек', 'fa-building-columns'],
     ['алко', 'fa-wine-glass'], ['табак', 'fa-smoking']
 ];
+function catEmoji(cat, type) {
+    const key = String(cat || '');
+    if (categoryIcons[key]) return categoryIcons[key];
+    if (type === 'income') return '💰';
+    if (type === 'savings') return '🐷';
+    return '💳';
+}
+
 function catIcon(cat, type) {
     const c = String(cat || '').toLowerCase();
     for (const [k, i] of CAT_ICONS) if (c.includes(k)) return i;
@@ -1695,7 +2010,7 @@ function openEditTx(id) {
     editingTxId = id;
     const catSel = document.getElementById('edit-tx-category');
     catSel.innerHTML = '';
-    const addOpt = (v, sel) => { const o = document.createElement('option'); o.value = v; o.innerText = v; if (v === sel) o.selected = true; catSel.appendChild(o); };
+    const addOpt = (v, sel) => { const o = document.createElement('option'); o.value = v; o.innerText = (categoryIcons[v] || (tx.type === 'income' ? '💰' : '💳')) + ' ' + v; if (v === sel) o.selected = true; catSel.appendChild(o); };
     if (tx.type === 'expense') {
         Object.keys(expenseCategories).forEach(c => addOpt(c, tx.category));
         catSel.disabled = false;
@@ -1713,6 +2028,11 @@ function openEditTx(id) {
 function closeEditTx() {
     document.getElementById('tx-edit-modal').style.display = 'none';
     editingTxId = null;
+}
+function deleteEditTx() { // удаление с десктопа (п.12 аудита) + явная кнопка вместо long-press
+    const id = editingTxId;
+    closeEditTx();
+    askDeleteTx(id);
 }
 function saveEditTx() {
     const tx = transactions.find(t => t.id === editingTxId);
@@ -1784,28 +2104,16 @@ function renderBillsList() {
     withRemind.forEach(r => {
         const row = document.createElement('div');
         row.className = 'tx-item';
-        row.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-bell" style="color:var(--gold);font-size:12px;"></i><span style="font-size:12px;">${esc(r.name)}</span></div><span class="hideable" style="font-size:12px;color:var(--text-muted);">каждое ${r.day}-е · ${fmt(r.amount)} ${currentCurrency}</span>`;
+        row.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-bell" style="color:var(--gold);font-size:12px;"></i><span style="font-size:12px;">${esc(r.name)}</span></div><span class="hideable" style="font-size:12px;color:var(--text-muted);">${r.day === 31 ? 'последний день месяца' : `каждое ${r.day}-е`} · ${fmt(r.amount)} ${currentCurrency}</span>`;
         c.appendChild(row);
     });
 }
 
 /* ---------- Реальная биометрия Telegram ---------- */
 function biometricUnlock() {
-    const bio = platform.biometry;
-    if (!bio) { uiAlert('Биометрия недоступна на этом устройстве — введите PIN'); return; }
-    try {
-        bio.init(() => {
-            bio.requestAccess({ reason: 'Разблокировка Sage Finance' }, (granted) => {
-                if (!granted) return;
-                bio.authenticate({ reason: 'Подтвердите личность' }, (success) => {
-                    if (success) {
-                        platform.haptic('success')
-                        hidePinScreen();
-                    }
-                });
-            });
-        });
-    } catch (e) { uiAlert('Биометрия недоступна — введите PIN'); }
+    initBiometryIfNeeded();
+    if (!platform.biometry || !platform.biometry.isBiometricAvailable) { uiAlert('Биометрия недоступна на этом устройстве — введите PIN'); return; }
+    tryAutoBiometricAuth();
 }
 
 /* ---------- Реальные платежи: PRO и донаты (Telegram Stars) ---------- */
@@ -1853,9 +2161,14 @@ async function fetchPartners() {
     try {
         const r = await fetch(API_URL + '/partners');
         const d = await r.json();
-        if (d && Array.isArray(d.partners) && d.partners.length) {
-            partnerBanks = d.partners;
-            renderUI();
+        if (d && Array.isArray(d.partners)) {
+            // принимаем только офферы с валидным http(s) URL — невалидные пропускаем (п.3 аудита)
+            partnerBanks = d.partners.filter(b => b && /^https?:\/\/[^\s"'<>`\\]{1,500}$/.test(String(b.url || ''))).map(b => ({
+                name: String(b.name || '').slice(0, 100),
+                desc: String(b.desc || '').slice(0, 200),
+                url: String(b.url)
+            }));
+            if (partnerBanks.length) renderUI();
         }
     } catch (e) { /* останутся локальные значения */ }
 }
@@ -1885,16 +2198,18 @@ function renderBudgetPlanner(catTotals) {
         const plan = expenseCategories[cat];
         const fact = catTotals[cat] || 0;
         const pct = plan > 0 ? Math.min(Math.round((fact / plan) * 100), 100) : 0;
+        const remaining = Math.max(0, plan - fact);
         const card = document.createElement('div');
         card.style.marginBottom = "14px";
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:4px;">
-                <span><i class="fa-solid ${catIcon(cat, 'expense')}" style="width:16px; color:var(--accent-sage); font-size:11px;"></i> <span data-cat-cycle title="нужное/желание — нажмите чтобы сменить" style="cursor:pointer;">${esc(cat)}</span> <i class="fa-solid fa-trash" data-cat-del title="Удалить категорию" style="font-size:10px; color:var(--danger); cursor:pointer; margin-left:6px;"></i></span>
+                <span><span class="category-emoji" style="width:24px;height:24px;font-size:13px;vertical-align:middle;">${catEmoji(cat, 'expense')}</span> <span data-cat-cycle title="нужное/желание — нажмите чтобы сменить" style="cursor:pointer;">${esc(cat)}</span> <i class="fa-solid fa-trash" data-cat-del title="Удалить категорию" style="font-size:10px; color:var(--danger); cursor:pointer; margin-left:6px;"></i></span>
                 <span class="hideable" style="font-weight:bold;">${fmt(fact)} / ${fmt(plan)} ${currentCurrency} (${pct}%)</span>
             </div>
             <div style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
                 <div style="width:${pct}%; height:100%; background:${pct > 90 ? 'var(--danger)' : 'var(--accent-sage)'}; transition: width 0.3s;"></div>
-            </div>`;
+            </div>
+            <div class="hideable" style="font-size:10px;color:var(--text-muted);margin-top:4px;">Осталось: ${fmt(remaining)} ${currentCurrency}</div>`;
         card.querySelector('[data-cat-cycle]').addEventListener('click', () => cycleTag(cat));
         card.querySelector('[data-cat-del]').addEventListener('click', () => deleteCategory(cat));
         container.appendChild(card);
@@ -1904,7 +2219,9 @@ function renderBudgetPlanner(catTotals) {
 function renderGoalsList() {
     const container = document.getElementById('goals-list');
     container.innerHTML = '';
+    let goalsTotal = 0;
     goals.forEach(g => {
+        goalsTotal += (g.current || 0);
         const pct = Math.min(Math.round((g.current / g.target) * 100), 100);
         const card = document.createElement('div');
         card.style.marginBottom = "16px";
@@ -1922,6 +2239,8 @@ function renderGoalsList() {
         card.querySelector('[data-goal-del]').addEventListener('click', () => deleteGoal(g.id));
         container.appendChild(card);
     });
+    const gt = document.getElementById('goals-total');
+    if (gt) gt.innerText = fmt(goalsTotal) + ' ' + currentCurrency;
 }
 
 function renderPartnerBanks() {
@@ -1949,10 +2268,26 @@ function renderChart(catTotals) {
         type: 'doughnut',
         data: {
             labels: Object.keys(catTotals).length ? Object.keys(catTotals) : ['Нет данных'],
-            datasets: [{ data: Object.values(catTotals).length ? Object.values(catTotals) : [1], backgroundColor: ['#52B788', '#74C69D', '#FFD166', '#EF476F', '#118AB2', '#9B5DE5'], borderWidth: 0 }]
+            datasets: [{ data: Object.values(catTotals).length ? Object.values(catTotals) : [1], backgroundColor: ['#52B788', '#74C69D', '#FFD166', '#EF476F', '#118AB2', '#9B5DE5', '#F15BB5', '#00BBF9', '#00F5D4', '#8AC926'], borderWidth: 0 }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
+
+    // Центрируем сумму по фактическому центру кольца. При legend: right
+    // Chart.js сдвигает кольцо влево относительно canvas.
+    const positionChartTotal = () => {
+        const total = document.getElementById('chart-total');
+        const meta = chartInstance && chartInstance.getDatasetMeta(0);
+        const arc = meta && meta.data && meta.data[0];
+        if (!total || !arc) return;
+        total.style.inset = 'auto';
+        total.style.left = arc.x + 'px';
+        total.style.top = arc.y + 'px';
+        total.style.width = 'max-content';
+        total.style.transform = 'translate(-50%, -50%)';
+    };
+    positionChartTotal();
+    requestAnimationFrame(positionChartTotal);
     const hasData = Object.keys(catTotals).length > 0;
     const totalSum = hasData ? Object.values(catTotals).reduce((a, b) => a + b, 0) : 0;
     const sumEl = document.getElementById('chart-total-sum');
@@ -1964,8 +2299,9 @@ function renderChart(catTotals) {
 function renderYearlyChart() {
     const ctx = document.getElementById('yearlyChart').getContext('2d');
     if (yearlyChartInstance) yearlyChartInstance.destroy();
-    const incByMonth = allMonths.map(m => transactions.filter(t => t.month === m && t.type === 'income').reduce((s, t) => s + (t.amountBase || t.amount), 0));
-    const expByMonth = allMonths.map(m => transactions.filter(t => t.month === m && t.type === 'expense').reduce((s, t) => s + (t.amountBase || t.amount), 0));
+    const selY = selectedMonth.slice(0, 4); // год выбранного в селекторе месяца
+    const incByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'income').reduce((s, t) => s + (t.amountBase || t.amount), 0));
+    const expByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'expense').reduce((s, t) => s + (t.amountBase || t.amount), 0));
     yearlyChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1985,7 +2321,9 @@ document.getElementById('open-modal-btn').onclick = () => {
     triggerHaptic();
     onTxTypeChange();
     txModal.style.display = 'flex';
+    setTimeout(() => { try { document.getElementById('tx-amount').focus(); } catch (e) {} }, 60);
 };
+txModal.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('save-tx-btn').click(); } });
 document.getElementById('close-modal-btn').onclick = () => { txModal.style.display = 'none'; };
 document.getElementById('save-tx-btn').onclick = () => {
     const type = document.getElementById('tx-type').value;
@@ -2001,13 +2339,13 @@ document.getElementById('save-tx-btn').onclick = () => {
             goal.current += base;
             transactions.unshift({
                 id: Date.now(), type: 'savings', category: `Копилка: ${goal.name}`,
-                amount, currency, amountBase: base, month: selectedMonth, date: 'Сегодня', ts: Date.now()
+                amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now()
             });
         }
     } else {
         const category = document.getElementById('tx-category').value;
         transactions.unshift({
-            id: Date.now(), type, category, amount, currency, amountBase: base, month: selectedMonth, date: 'Сегодня',
+            id: Date.now(), type, category, amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня',
             trip: (type === 'expense' && tripMode) || undefined, ts: Date.now()
         });
     }
@@ -2037,7 +2375,7 @@ let cloudSaveTimer = null, cloudVersion = 0;
 function getStatePayload() {
     return {
         transactions, goals, deposits, debts, recurring,
-        expenseCategories, incomeCategories, rates, currency: currentCurrency,
+        expenseCategories, incomeCategories, categoryIcons, rates, currency: currentCurrency,
         catTags
     };
 }
@@ -2051,15 +2389,17 @@ function applyState(s) {
     if (s.expenseCategories)   { expenseCategories = s.expenseCategories; localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories)); }
     if (s.catTags)             { catTags = s.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
     if (s.incomeCategories)    { incomeCategories = s.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
+    if (s.categoryIcons)      { categoryIcons = s.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
     if (s.rates)               { rates = s.rates; localStorage.setItem('sage_rates', JSON.stringify(rates));
                                  document.getElementById('rate-usd').value = rates.USD;
                                  document.getElementById('rate-eur').value = rates.EUR; }
     if (s.currency)            { currentCurrency = s.currency; localStorage.setItem('sage_currency', currentCurrency);
                                  document.getElementById('currency-select').value = currentCurrency; }
-    if (s.proUntil) {
+    if (Object.prototype.hasOwnProperty.call(s, 'proUntil') || Object.prototype.hasOwnProperty.call(s, 'isPro')) {
         proUntil = Number(s.proUntil) || 0;
+        isPro = !!s.isPro && proUntil > Date.now();
         localStorage.setItem('sage_pro_until', String(proUntil));
-        if (proUntil && Date.now() < proUntil) { isPro = true; localStorage.setItem('sage_is_pro', 'true'); }
+        localStorage.setItem('sage_is_pro', isPro ? 'true' : 'false');
     }
 }
 async function cloudSave() {
@@ -2120,7 +2460,11 @@ async function familyCreate() {
 }
 async function familyJoin(code) {
     if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
-    code = (code || prompt('Введите код приглашения (например K7X2-9PQ4):') || '').trim().toUpperCase();
+    if (!code) {
+        openInputModal('Введите код приглашения (например K7X2-9PQ4)', '', (v) => familyJoin(v));
+        return;
+    }
+    code = String(code).trim().toUpperCase();
     if (!code) return;
     try {
         const r = await fetch(API_URL + '/family', {
@@ -2165,6 +2509,8 @@ function streakLine() {
         if (d && t.type === 'expense' && !t.trip && d.toISOString().slice(0, 10) === today) spentToday += (t.amountBase || t.amount);
     });
     const ok = spentToday <= daily;
+    const cutoff = Date.now() - 90 * 86400000; // п.16 аудита: streakMap не должен расти бесконечно
+    Object.keys(streakMap).forEach(k => { const kt = new Date(k).getTime(); if (kt && kt < cutoff) delete streakMap[k]; });
     streakMap[today] = ok;
     localStorage.setItem('sage_streak', JSON.stringify(streakMap));
     let streak = 0;
@@ -2196,18 +2542,18 @@ function renderInsights() {
     if (!card) return;
     if (!transactions.length) { card.style.display = 'none'; return; }
     card.style.display = 'block';
-    const mi = MONTH_NUM[selectedMonth];
-    const prevMonth = allMonths[(mi + 11) % 12];
+    const mi = Number(selectedMonth.slice(5, 7)) - 1;
+    const pKey = prevMonthKey(selectedMonth);
     const cur = {}, prev = {};
     let inc = 0, incPrev = 0, sav = 0;
     transactions.forEach(t => {
         if (t.trip) return;
         const base = t.amountBase || t.amount;
-        if (t.month === selectedMonth) {
+        if (t.mk === selectedMonth) {
             if (t.type === 'expense') cur[t.category] = (cur[t.category] || 0) + base;
             if (t.type === 'income') inc += base;
             if (t.type === 'savings') sav += base;
-        } else if (t.month === prevMonth) {
+        } else if (t.mk === pKey) {
             if (t.type === 'expense') prev[t.category] = (prev[t.category] || 0) + base;
             if (t.type === 'income') incPrev += base;
         }
@@ -2278,7 +2624,7 @@ function applyAutoSavings(incomeBase) {
             const sum = Math.round(incomeBase * pct / 100);
             if (sum > 0) {
                 g.current = (g.current || 0) + sum;
-                transactions.unshift({ id: Date.now() + g.id, type: 'savings', category: `Копилка: ${g.name}`, amount: sum, currency: currentCurrency, amountBase: sum, month: selectedMonth, date: 'Автоперевод', ts: Date.now() });
+                transactions.unshift({ id: Date.now() + g.id, type: 'savings', category: `Копилка: ${g.name}`, amount: sum, currency: currentCurrency, amountBase: sum, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Автоперевод', ts: Date.now() });
                 any = true;
             }
         }
@@ -2305,6 +2651,7 @@ function openTxIncome() {
     document.getElementById('tx-type').value = 'income';
     onTxTypeChange();
     document.getElementById('tx-modal').style.display = 'flex';
+    setTimeout(() => { try { document.getElementById('tx-amount').focus(); } catch (e) {} }, 60);
 }
 
 /* ---------- Карточка месяца для шеринга ---------- */
@@ -2314,9 +2661,9 @@ function buildShareImage() {
     const g = x.createLinearGradient(0, 0, 0, 1350);
     g.addColorStop(0, '#0B1311'); g.addColorStop(1, '#16241F');
     x.fillStyle = g; x.fillRect(0, 0, 1080, 1350);
-    x.fillStyle = '#52B788'; x.font = 'bold 64px sans-serif'; x.fillText('Sage Finance', 80, 140);
-    x.fillStyle = '#8E9F96'; x.font = '36px sans-serif'; x.fillText('Итоги: ' + selectedMonth, 80, 200);
-    const mTx = transactions.filter(t => t.month === selectedMonth);
+    x.fillStyle = '#52B788'; x.font = 'bold 64px sans-serif'; x.fillText('Считай', 80, 140);
+    x.fillStyle = '#8E9F96'; x.font = '36px sans-serif'; x.fillText('Итоги: ' + monthNameOf(selectedMonth) + ' ' + selectedMonth.slice(0, 4), 80, 200);
+    const mTx = transactions.filter(t => t.mk === selectedMonth);
     const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + (t.amountBase || t.amount), 0);
     const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amountBase || t.amount), 0);
     const sav = mTx.filter(t => t.type === 'savings').reduce((s, t) => s + (t.amountBase || t.amount), 0);
@@ -2335,7 +2682,7 @@ async function shareMonth() {
     logEvent('share');
     const img = buildShareImage();
     if (!platform.inTelegram) {
-        const a = document.createElement('a'); a.href = img; a.download = 'sage-month.png'; a.click();
+        const a = document.createElement('a'); a.href = img; a.download = 'schitay-month.png'; a.click();
         return;
     }
     try {
@@ -2361,6 +2708,19 @@ async function startTrial() {
         } else { uiAlert(d.error || 'Триал уже использовался.'); }
     } catch (e) { uiAlert('Ошибка связи с сервером.'); }
 }
+
+/* ---------- Ярлык Mini App на главный экран ---------- */
+function addToHomeScreen() {
+    if (!platform.inTelegram || !tg?.addToHomeScreen) {
+        const st=document.getElementById('home-screen-status'); if(st) st.innerText='Функция доступна в поддерживаемых версиях Telegram на телефоне.';
+        return;
+    }
+    try {
+        tg.addToHomeScreen();
+        const st=document.getElementById('home-screen-status'); if(st) st.innerText='Запрос на добавление ярлыка отправлен.';
+    } catch(e) { uiAlert('Не удалось добавить ярлык. Попробуйте ещё раз из Telegram.'); }
+}
+try { tg?.onEvent?.('homeScreenAdded', () => { const st=document.getElementById('home-screen-status'); if(st) st.innerText='✓ «Считай» добавлен на главный экран'; }); } catch(e) {}
 
 /* ---------- Ключ быстрой записи ---------- */
 async function quickTokenShow() {
@@ -2418,6 +2778,26 @@ function uiConfirm(msg, onOk) {
     if (window.confirm(msg)) onOk();
 }
 
+/* ---------- Универсальная модалка ввода (вместо prompt()) ---------- */
+let inputModalCb = null;
+function openInputModal(title, value, cb, inputType) {
+    document.getElementById('input-modal-title').innerText = title;
+    const f = document.getElementById('input-modal-field');
+    f.value = (value === undefined || value === null) ? '' : value;
+    f.type = inputType || 'text';
+    inputModalCb = cb;
+    document.getElementById('input-modal').style.display = 'flex';
+    setTimeout(() => { try { f.focus(); } catch (e) {} }, 60);
+}
+function closeInputModal() { document.getElementById('input-modal').style.display = 'none'; inputModalCb = null; }
+function submitInputModal() {
+    const v = document.getElementById('input-modal-field').value;
+    const cb = inputModalCb;
+    closeInputModal();
+    if (cb) cb(v);
+}
+document.getElementById('input-modal-field').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitInputModal(); });
+
 function inviteLinkHTML(code) {
     const u = window._botUsername;
     if (!u) return `код: <b>${code}</b>`;
@@ -2428,7 +2808,9 @@ function inviteLinkHTML(code) {
 
 /* ---------- Обратная связь через бота ---------- */
 async function sendFeedback() {
-    const text = prompt('Опишите идею, ошибку или вопрос — сообщение уйдёт разработчику:');
+    openInputModal('Написать разработчику', '', (v) => sendFeedbackText(v));
+}
+async function sendFeedbackText(text) {
     if (!text || !text.trim()) return;
     if (!platform.inTelegram) {
         uiAlert('Обратная связь работает внутри Telegram. Напишите боту напрямую.');
@@ -2461,7 +2843,13 @@ async function handleInviteParam() {
     if (!platform.inTelegram) return;
     const p = platform.startParam;
     if (!p) return;
-    if (/^[a-z0-9-]{4,14}$/i.test(p)) { await familyJoin(p.toUpperCase()); return; }
+    if (/^[a-z0-9-]{4,14}$/i.test(p)) {
+        // П.7 аудита: клик по чужой ссылке не должен мгновенно переводить в чужую семью
+        uiConfirm(`Вступить в семью по коду ${p.toUpperCase()}? Ваши локальные данные будут заменены общими данными семьи.`, async () => {
+            await familyJoin(p.toUpperCase());
+        });
+        return;
+    }
     const tabs = { balance: 'dashboard', budget: 'budget', goals: 'goals', debts: 'goals', pro: 'pro', settings: 'settings' };
     const tab = tabs[p.toLowerCase()];
     if (tab) {
@@ -2488,9 +2876,10 @@ document.addEventListener('click', (e) => {
     try { await fetchCbRates(); } catch (e) {}
     try { await fetchPartners(); } catch (e) {}
     // тема
-    const savedTheme = localStorage.getItem('sage_theme');
+    const savedTheme = localStorage.getItem('sage_theme') || 'system';
     if (savedTheme) {
         document.body.setAttribute('data-theme', savedTheme);
+        if (savedTheme === 'system') applySystemTelegramTheme();
         document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', (b.getAttribute('onclick') || '').includes(`'${savedTheme}'`)));
     }
     // валюта
@@ -2502,6 +2891,7 @@ document.addEventListener('click', (e) => {
     applyTripUI();
 
     initMonthSelector();
+    migrateMonthKeys();
     autoApplyRecurring();
     checkReminders();
     applyPrivacy();
