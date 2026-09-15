@@ -343,7 +343,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         <div class="glass-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
                 <div style="font-size: 15px; font-weight: bold;">Планер расходов (План vs Факт)</div>
-                <button class="btn-small" onclick="openAddCatModal()">+ Категория</button>
             </div>
             <div id="budget-list"></div>
         </div>
@@ -528,12 +527,19 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             </div>
         </div>
 
-        <div class="section-title">Быстрый доступ</div>
+        <div class="section-title">Ярлык приложения</div>
         <div class="glass-card">
             <div style="font-size:13px;font-weight:700;margin-bottom:5px;">📱 Добавить «Считай» на главный экран</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:9px;">Открывайте финансовый помощник одним нажатием, как обычное приложение Telegram.</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:9px;">Функция зависит от версии Telegram и поддержки устройства. Мы покажем реальный статус, а не будем считать ярлык добавленным заранее.</div>
             <button class="btn-submit" onclick="addToHomeScreen()" id="home-screen-btn">Добавить на главный экран</button>
             <div id="home-screen-status" style="font-size:11px;color:var(--text-muted);margin-top:7px;"></div>
+        </div>
+
+        <div class="section-title">Категории</div>
+        <div class="glass-card">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Категории — отдельный справочник. Месячный план задаётся ниже в «Планере расходов». В семейном бюджете новые категории доступны всем участникам, но лимит существующей категории меняет только владелец.</div>
+            <button class="btn-small" onclick="openAddCatModal()">+ Добавить категорию</button>
+            <div id="category-manager" style="margin-top:10px;"></div>
         </div>
 
         <div class="section-title">Семейный доступ</div>
@@ -571,9 +577,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         <button class="btn-submit" style="margin: 4px 16px 4px; width: calc(100% - 32px); background: rgba(255,255,255,0.1); border: 1px solid var(--card-border); color: var(--text-main);" onclick="sendFeedback()"><i class="fa-solid fa-comment-dots"></i> Написать разработчику</button>
         <button class="btn-submit btn-danger" style="margin: 4px 16px 12px; width: calc(100% - 32px);" onclick="clearAllData()">Сбросить все данные</button>
     </div>
-
-    <!-- FAB Button -->
-    <div class="fab" id="open-modal-btn"><i class="fa-solid fa-plus"></i></div>
 
     <div id="undo-toast" style="display:none; position:fixed; bottom:150px; left:50%; transform:translateX(-50%); background:var(--bg-grad-2); border:1px solid var(--card-border); padding:10px 16px; border-radius:12px; font-size:12px; z-index:2000; box-shadow:0 8px 24px rgba(0,0,0,0.5); white-space:nowrap;">Операция удалена <span onclick="undoDelete()" style="color:var(--accent-sage); font-weight:bold; cursor:pointer; margin-left:8px;">Отменить</span></div>
 
@@ -673,10 +676,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <div id="cat-emoji-picker" class="emoji-picker"></div>
                 <input type="hidden" id="new-cat-icon" value="💰">
             </div>
-            <div class="form-group">
-                <label class="form-label">Плановый лимит на месяц</label>
-                <input type="number" class="form-input" id="new-cat-limit" placeholder="15000" inputmode="decimal">
-            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">После создания категория появится в планере с нулевым лимитом. Сам план задаётся отдельно в бюджете.</div>
             <button class="btn-submit" onclick="saveNewCategory()">Создать категорию</button>
         </div>
     </div>
@@ -1092,7 +1092,6 @@ function switchTab(tabId, el) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`page-${tabId}`).classList.add('active');
     el.classList.add('active');
-    document.getElementById('open-modal-btn').style.display = (tabId === 'dashboard') ? 'flex' : 'none';
     if (tabId === 'bot') setTimeout(() => document.getElementById('chat-box').scrollTop = 99999, 50);
 }
 function switchSubTab(tabId, el) {
@@ -1697,29 +1696,55 @@ function closeAddCatModal() { document.getElementById('cat-modal').style.display
 function openAddGoalModal() { triggerHaptic(); document.getElementById('goal-modal').style.display = 'flex'; }
 function closeAddGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
 
+function renderCategoryManager() {
+    const box = document.getElementById('category-manager');
+    if (!box) return;
+    const renderGroup = (title, list, isExpense) => {
+        const names = isExpense ? Object.keys(expenseCategories) : incomeCategories.slice();
+        return `<div style="font-size:11px;font-weight:800;color:var(--text-muted);margin:10px 0 5px;">${title}</div>` +
+            (names.length ? names.map(cat => `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--card-border);font-size:12px;">
+                    <span style="display:flex;align-items:center;gap:7px;min-width:0;">
+                        <span class="category-emoji">${esc(categoryIcons[cat] || (isExpense ? '💳' : '💰'))}</span>
+                        <span style="overflow:hidden;text-overflow:ellipsis;">${esc(cat)}</span>
+                    </span>
+                    ${(!familyIsFamily || familyRole === 'owner') ? `<button type="button" class="btn-small btn-outline" data-category-delete="${jsAttr(cat)}" data-category-type="${isExpense ? 'expense' : 'income'}">Удалить</button>` : ''}
+                </div>`).join('') : '<div style="font-size:11px;color:var(--text-muted);padding:5px 0;">Нет категорий.</div>');
+    };
+    box.innerHTML = renderGroup('Расходы', null, true) + renderGroup('Доходы', null, false);
+    box.querySelectorAll('[data-category-delete]').forEach(btn => {
+        btn.addEventListener('click', () => deleteCategory(btn.dataset.categoryDelete, btn.dataset.categoryType));
+    });
+}
+
 function saveNewCategory() {
-    const name = document.getElementById('new-cat-name').value.trim();
+    const name = document.getElementById('new-cat-name').value.trim().slice(0, 100);
     const type = document.getElementById('new-cat-type').value;
-    const limit = Number(document.getElementById('new-cat-limit').value) || 0;
     if (!name) return uiAlert("Введите название категории");
     const icon = document.getElementById('new-cat-icon').value || '💰';
-    categoryIcons[name] = icon;
+
     if (type === 'expense') {
-        expenseCategories[name] = limit;
-        localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
+        if (Object.prototype.hasOwnProperty.call(expenseCategories, name)) return uiAlert('Такая категория расходов уже есть.');
+        if (Object.keys(expenseCategories).length >= 100) return uiAlert('Достигнут лимит категорий.');
+        expenseCategories[name] = 0;
     } else {
-        if (!incomeCategories.includes(name)) incomeCategories.push(name);
-        localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories));
+        if (incomeCategories.includes(name)) return uiAlert('Такая категория доходов уже есть.');
+        if (incomeCategories.length >= 100) return uiAlert('Достигнут лимит категорий.');
+        incomeCategories.push(name);
     }
-    localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons));
-    cloudSave();
+    categoryIcons[name] = icon;
+    saveAll();
     document.getElementById('new-cat-name').value = '';
-    document.getElementById('new-cat-limit').value = '';
     closeAddCatModal(); renderUI();
 }
-function deleteCategory(catName) {
+
+function deleteCategory(catName, type = 'expense') {
     uiConfirm(`Удалить категорию "${catName}"?`, () => {
-        delete expenseCategories[catName];
+        if (type === 'income') {
+            incomeCategories = incomeCategories.filter(x => x !== catName);
+        } else {
+            delete expenseCategories[catName];
+        }
         delete categoryIcons[catName];
         saveAll();
         renderUI();
@@ -1995,6 +2020,7 @@ function renderUI() {
     renderDashboardPlanner(income, expense, savings);
 
     renderBudgetPlanner(catTotals);
+    renderCategoryManager();
     renderGoalsList();
     renderDepositsList();
     renderDebtsList();
@@ -2258,7 +2284,7 @@ function renderBudgetPlanner(catTotals) {
         card.style.marginBottom = "14px";
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:4px;">
-                <span><span class="category-emoji" style="width:24px;height:24px;font-size:13px;vertical-align:middle;">${catEmoji(cat, 'expense')}</span> <span data-cat-cycle title="нужное/желание — нажмите чтобы сменить" style="cursor:pointer;">${esc(cat)}</span> <i class="fa-solid fa-trash" data-cat-del title="Удалить категорию" style="font-size:10px; color:var(--danger); cursor:pointer; margin-left:6px;"></i></span>
+                <span><span class="category-emoji" style="width:24px;height:24px;font-size:13px;vertical-align:middle;">${catEmoji(cat, 'expense')}</span> <span data-cat-cycle title="нужное/желание — нажмите чтобы сменить" style="cursor:pointer;">${esc(cat)}</span></span>
                 <span class="hideable" style="font-weight:bold;">${fmt(fact)} / ${fmt(plan)} ${currentCurrency} (${pct}%)</span>
             </div>
             <div style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
@@ -2266,7 +2292,6 @@ function renderBudgetPlanner(catTotals) {
             </div>
             <div class="hideable" style="font-size:10px;color:var(--text-muted);margin-top:4px;">Осталось: ${fmt(remaining)} ${currentCurrency}</div>`;
         card.querySelector('[data-cat-cycle]').addEventListener('click', () => cycleTag(cat));
-        card.querySelector('[data-cat-del]').addEventListener('click', () => deleteCategory(cat));
         container.appendChild(card);
     });
 }
@@ -2328,21 +2353,23 @@ function renderChart(catTotals) {
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
 
-    // Центрируем сумму по фактическому центру кольца. При legend: right
-    // Chart.js сдвигает кольцо влево относительно canvas.
+    // Chart.js сдвигает кольцо влево, когда легенда стоит справа.
+    // Берём центр chartArea после layout, а не координаты первой дуги:
+    // это не ломается при изменении размера экрана/легенды.
     const positionChartTotal = () => {
         const total = document.getElementById('chart-total');
-        const meta = chartInstance && chartInstance.getDatasetMeta(0);
-        const arc = meta && meta.data && meta.data[0];
-        if (!total || !arc) return;
+        const area = chartInstance && chartInstance.chartArea;
+        if (!total || !area) return;
+        const x = (area.left + area.right) / 2;
+        const y = (area.top + area.bottom) / 2;
         total.style.inset = 'auto';
-        total.style.left = arc.x + 'px';
-        total.style.top = arc.y + 'px';
+        total.style.left = x + 'px';
+        total.style.top = y + 'px';
         total.style.width = 'max-content';
         total.style.transform = 'translate(-50%, -50%)';
     };
-    positionChartTotal();
     requestAnimationFrame(positionChartTotal);
+    setTimeout(positionChartTotal, 80);
     const hasData = Object.keys(catTotals).length > 0;
     const totalSum = hasData ? Object.values(catTotals).reduce((a, b) => a + b, 0) : 0;
     const sumEl = document.getElementById('chart-total-sum');
@@ -2372,12 +2399,6 @@ function renderYearlyChart() {
 
 /* ---------- События операции ---------- */
 const txModal = document.getElementById('tx-modal');
-document.getElementById('open-modal-btn').onclick = () => {
-    triggerHaptic();
-    onTxTypeChange();
-    txModal.style.display = 'flex';
-    setTimeout(() => { try { document.getElementById('tx-amount').focus(); } catch (e) {} }, 60);
-};
 txModal.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('save-tx-btn').click(); } });
 document.getElementById('close-modal-btn').onclick = () => { txModal.style.display = 'none'; };
 document.getElementById('save-tx-btn').onclick = () => {
@@ -2545,7 +2566,9 @@ async function cloudLoad() {
 function familyLink(token) {
     const u = window._botUsername;
     if (!u || !token) return '';
-    return `https://t.me/${u}?startapp=fi_${encodeURIComponent(token)}`;
+    // Сначала открываем чат бота (/start), затем из него — Mini App.
+    // Это повышает шанс гарантированной доставки сообщения об одобрении.
+    return `https://t.me/${u}?start=fi_${encodeURIComponent(token)}`;
 }
 
 function appLink(token) {
@@ -2621,9 +2644,43 @@ async function loadFamilyMembers() {
         };
         box.style.display='block';
         box.innerHTML = '<div style="font-size:12px;font-weight:800;margin-bottom:7px;">👥 Участники семьи</div>' +
-            (familyMembers.length ? familyMembers.map(m => `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-size:11px;"><span>${esc(nameOf(m))}</span><span style="color:var(--text-muted)">${esc(roleLabel(m))}</span></div>`).join('') : '<div style="font-size:11px;color:var(--text-muted)">Участников пока нет.</div>') +
-            (familyPending.length ? '<div style="font-size:12px;font-weight:800;margin:11px 0 5px;">⏳ Ожидают подтверждения</div>' + familyPending.map(m => `<div style="padding:7px 0;border-top:1px solid var(--border);font-size:11px;"><b>${esc(nameOf(m))}</b><div style="color:var(--text-muted);margin-top:2px;">Заявка отправлена — подтвердите её в боте.</div></div>`).join('') : '');
+            (familyMembers.length ? familyMembers.map(m => {
+                const name = nameOf(m);
+                const remove = m.role === 'member'
+                    ? `<button type="button" class="btn-small btn-danger" data-remove-member="${jsAttr(String(m.tg_id))}" data-remove-name="${jsAttr(name)}">Удалить</button>`
+                    : '';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--card-border);font-size:11px;">
+                    <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;">${esc(name)}<br><span style="color:var(--text-muted)">${esc(roleLabel(m))}</span></span>${remove}
+                </div>`;
+            }).join('') : '<div style="font-size:11px;color:var(--text-muted)">Участников пока нет.</div>') +
+            (familyPending.length ? '<div style="font-size:12px;font-weight:800;margin:11px 0 5px;">⏳ Ожидают подтверждения</div>' + familyPending.map(m => `<div style="padding:7px 0;border-top:1px solid var(--card-border);font-size:11px;"><b>${esc(nameOf(m))}</b><div style="color:var(--text-muted);margin-top:2px;">Заявка отправлена — подтвердите её в боте.</div></div>`).join('') : '');
+        box.querySelectorAll('[data-remove-member]').forEach(btn => {
+            btn.addEventListener('click', () => removeFamilyMember(btn.dataset.removeMember, btn.dataset.removeName || 'участника'));
+        });
     } catch(e) { box.style.display='none'; }
+}
+
+async function removeFamilyMember(tgId, displayName) {
+    uiConfirm(`Удалить ${displayName} из семьи? Он больше не увидит общий семейный бюджет.`, async () => {
+        try {
+            const r = await fetch(API_URL + '/family', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({initData:platform.initData, action:'remove_member', tgId:Number(tgId)})
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || !d.ok) {
+                if (d.error === 'member_not_found') return uiAlert('Участник уже не состоит в семье.');
+                return uiAlert('Не удалось удалить участника.');
+            }
+            uiAlert('Участник удалён из семьи.');
+            await loadFamilyMembers();
+            await cloudLoad();
+            renderUI();
+        } catch(e) {
+            uiAlert('Ошибка связи с сервером.');
+        }
+    });
 }
 
 async function familyCreate() {
@@ -2687,6 +2744,16 @@ function openFamilyJoinInput() {
 
 async function familyRequestJoin(token) {
     if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
+    try {
+        if (tg?.requestWriteAccess && !(platform.user && platform.user.allows_write_to_pm)) {
+            await new Promise(resolve => {
+                let done = false;
+                const finish = () => { if (!done) { done = true; resolve(); } };
+                try { tg.requestWriteAccess(() => finish()); } catch (e) { finish(); }
+                setTimeout(finish, 1500);
+            });
+        }
+    } catch (e) {}
     token = String(token || '').trim();
     if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return uiAlert('Некорректная ссылка-приглашение.');
     try {
@@ -2955,7 +3022,7 @@ function setHomeScreenStatus(status) {
     if (status === 'added') { st.innerText='✓ «Считай» уже добавлен на главный экран'; if(btn) btn.style.display='none'; return; }
     if (status === 'missed') { st.innerText='Ярлык ещё не добавлен. Нажмите кнопку ниже.'; if(btn) btn.style.display='block'; return; }
     if (status === 'unsupported') { st.innerText='Эта версия Telegram или устройство не поддерживает ярлык Mini App.'; if(btn) btn.style.display='none'; return; }
-    st.innerText='Telegram поддерживает ярлык, но пока не сообщает его текущий статус.'; if(btn) btn.style.display='block';
+    st.innerText='Telegram не сообщает, был ли ярлык добавлен. Если иконки на рабочем столе нет, попробуйте кнопку ещё раз или используйте меню Telegram.'; if(btn) btn.style.display='block';
 }
 function checkHomeScreen() {
     if (!platform.inTelegram || !tg?.checkHomeScreenStatus) { setHomeScreenStatus('unsupported'); return; }
@@ -2965,9 +3032,13 @@ function checkHomeScreen() {
 function addToHomeScreen() {
     if (!platform.inTelegram || !tg?.addToHomeScreen) { setHomeScreenStatus('unsupported'); return; }
     try {
+        const st=document.getElementById('home-screen-status');
+        if (st) st.innerText='Запрашиваем добавление ярлыка…';
         tg.addToHomeScreen();
-        const st=document.getElementById('home-screen-status'); if(st) st.innerText='Открылся системный запрос Telegram. Подтвердите добавление ярлыка.';
-    } catch(e) { uiAlert('Не удалось вызвать добавление ярлыка. Попробуйте обновить Telegram.'); }
+        setTimeout(checkHomeScreen, 900);
+    } catch(e) {
+        setHomeScreenStatus('unsupported');
+    }
 }
 try {
     tg?.onEvent?.('homeScreenAdded', () => setHomeScreenStatus('added'));
@@ -3054,7 +3125,7 @@ document.getElementById('input-modal-field').addEventListener('keydown', (e) => 
 function inviteLinkHTML(code) {
     const u = window._botUsername;
     if (!u) return `код: <b>${esc(code)}</b>`;
-    const link = `https://t.me/${u}?startapp=fi_${encodeURIComponent(code)}`;
+    const link = `https://t.me/${u}?start=fi_${encodeURIComponent(code)}`;
     return `<a href="${jsAttr(link)}" style="color:var(--accent-light); word-break:break-all;">${esc(link)}</a>
         <span data-copy-link="${jsAttr(link)}" style="cursor:pointer; color:var(--gold); font-size:11px; white-space:nowrap;">📋 скопировать</span>`;
 }
