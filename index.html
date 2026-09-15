@@ -300,6 +300,12 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         <div id="onboarding-slot"></div>
         <div class="glass-card" id="insights-card"></div>
 
+        <div class="glass-card" id="family-overview" style="display:none;">
+            <div style="font-size:14px;font-weight:800;margin-bottom:8px;">👨‍👩‍👧 Семейный обзор</div>
+            <div id="family-overview-summary" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;"></div>
+            <div id="family-overview-members"></div>
+        </div>
+
         <div class="glass-card" id="analytics-carousel-card" style="touch-action: pan-y;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                 <div style="font-size: 14px; font-weight: bold;" id="carousel-title">Структура трат (Месяц)</div>
@@ -330,9 +336,12 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         </div>
 
         <div class="glass-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; gap:8px; flex-wrap:wrap;">
                 <div style="font-size: 14px; font-weight: bold;">Операции за месяц</div>
-                <input class="form-input" id="tx-search" placeholder="Поиск операций..." style="width:130px; padding:6px 10px; font-size:12px;" oninput="setTxSearch(this.value);">
+                <div style="display:flex; gap:6px; align-items:center; flex:1; justify-content:flex-end; min-width:210px;">
+                    <select class="form-select" id="tx-author-filter" style="width:105px; padding:6px 8px; font-size:11px; display:none;" onchange="setTxAuthorFilter(this.value)"></select>
+                    <input class="form-input" id="tx-search" placeholder="Поиск операций..." style="width:130px; padding:6px 10px; font-size:12px;" oninput="setTxSearch(this.value);">
+                </div>
             </div>
             <div id="tx-list"></div>
         </div>
@@ -342,7 +351,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
     <div class="app-page" id="page-budget">
         <div class="glass-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
-                <div style="font-size: 15px; font-weight: bold;">Планер расходов (План vs Факт)</div>
+                <div><div style="font-size: 15px; font-weight: bold;">Планер расходов (План vs Факт)</div><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Выберите месяц сверху, затем нажмите «Задать план» у нужной категории.</div></div>
             </div>
             <div id="budget-list"></div>
         </div>
@@ -681,6 +690,23 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         </div>
     </div>
 
+    <!-- MODAL: Monthly Budget Plan -->
+    <div class="modal" id="budget-plan-modal">
+        <div class="modal-content">
+            <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
+                <h3 id="budget-plan-title">План расходов</h3>
+                <i class="fa-solid fa-xmark" onclick="closeBudgetPlanModal()" style="font-size:20px;cursor:pointer;"></i>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Укажите лимит именно для выбранного месяца. Предыдущие месяцы сохраняют свои планы.</div>
+            <div class="form-group">
+                <label class="form-label">План на месяц</label>
+                <input type="number" class="form-input" id="budget-plan-amount" placeholder="10000" min="0" inputmode="decimal">
+            </div>
+            <button class="btn-submit" onclick="saveBudgetPlan()">Сохранить план</button>
+            <button class="btn-submit btn-outline" style="margin-top:8px;" onclick="clearBudgetPlan()">Убрать план месяца</button>
+        </div>
+    </div>
+
     <!-- MODAL: New Recurring Payment -->
     <div class="modal" id="rec-modal">
         <div class="modal-content">
@@ -871,6 +897,9 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         </div>
     </div>
 
+    <!-- FAB: add transaction from the app -->
+    <button class="fab" id="add-tx-fab" type="button" aria-label="Добавить операцию" title="Добавить операцию">+</button>
+
     <!-- Navigation Bar -->
     <div class="nav-bar">
         <div class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fa-solid fa-chart-pie"></i> Обзор</div>
@@ -937,7 +966,10 @@ let rates      = JSON.parse(localStorage.getItem('sage_rates')) || { 'USD': 91.5
 let tripMode   = localStorage.getItem('sage_trip') === '1';
 let weekLimit  = Number(localStorage.getItem('sage_weeklimit')) || 0;
 let txSearchQuery = '';
+let txAuthorFilter = 'all';
 let txVisibleCount = 50;
+let budgetPlans = JSON.parse(localStorage.getItem('sage_budget_plans')) || {};
+let editingBudgetCategory = '';
 let txListObserver = null;
 
 function setTxSearch(value) {
@@ -947,6 +979,59 @@ function setTxSearch(value) {
         txVisibleCount = 50;
     }
     renderUI();
+}
+
+function setTxAuthorFilter(value) {
+    txAuthorFilter = String(value || 'all');
+    txVisibleCount = 50;
+    renderUI();
+}
+function transactionAuthorName(tx) {
+    return String(tx.authorName || '').trim();
+}
+function getFamilyAuthorOptions() {
+    const map = new Map();
+    (familyMembers || []).forEach(m => {
+        const name = [m.first_name, m.last_name].filter(Boolean).join(' ').trim() || (m.username ? '@' + m.username : 'Пользователь #' + m.tg_id);
+        if (m.tg_id) map.set(String(m.tg_id), name);
+    });
+    (transactions || []).forEach(t => {
+        if (t.authorId && t.authorName) map.set(String(t.authorId), String(t.authorName));
+    });
+    if (platform.user?.id && !map.has(String(platform.user.id))) {
+        const u = platform.user; map.set(String(u.id), [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || 'Я');
+    }
+    return Array.from(map.entries()).sort((a,b)=>a[1].localeCompare(b[1], 'ru'));
+}
+function renderFamilyAuthorFilter() {
+    const sel = document.getElementById('tx-author-filter');
+    if (!sel) return;
+    if (!familyIsFamily) { sel.style.display='none'; sel.innerHTML=''; txAuthorFilter='all'; return; }
+    const options = getFamilyAuthorOptions();
+    sel.style.display='block';
+    sel.innerHTML = '<option value="all">Все участники</option>' + options.map(([id,name]) => `<option value="${jsAttr(id)}">${esc(name)}</option>`).join('');
+    if (!options.some(([id]) => id === txAuthorFilter)) txAuthorFilter = 'all';
+    sel.value = txAuthorFilter;
+}
+function renderFamilyOverview() {
+    const card = document.getElementById('family-overview');
+    const summary = document.getElementById('family-overview-summary');
+    const box = document.getElementById('family-overview-members');
+    if (!card || !summary || !box) return;
+    if (!familyIsFamily) { card.style.display='none'; return; }
+    const monthTxs = transactions.filter(t => t.mk === selectedMonth);
+    const expenses = monthTxs.filter(t => t.type === 'expense');
+    const total = expenses.reduce((s,t)=>s + Number(t.amountBase ?? t.amount ?? 0), 0);
+    const by = new Map();
+    expenses.forEach(t => {
+        const id = String(t.authorId || 'unknown');
+        const name = transactionAuthorName(t) || 'Без автора';
+        const row = by.get(id) || {name, amount:0, count:0};
+        row.amount += Number(t.amountBase ?? t.amount ?? 0); row.count++; by.set(id,row);
+    });
+    summary.innerText = `${monthNameOf(selectedMonth)} ${selectedMonth.slice(0,4)} · расходов ${fmt(total)} ${currentCurrency} · операций ${expenses.length}`;
+    box.innerHTML = Array.from(by.values()).sort((a,b)=>b.amount-a.amount).map(r => `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--card-border);font-size:11px;"><span>👤 ${esc(r.name)} · ${r.count} ${plural(r.count,'операция','операции','операций')}</span><b>${fmt(r.amount)} ${currentCurrency}</b></div>`).join('') || '<div style="font-size:11px;color:var(--text-muted);">Расходов в этом месяце пока нет.</div>';
+    card.style.display='block';
 }
 
 function resetTxPagination() {
@@ -1028,6 +1113,25 @@ function migrateMonthKeys() {
     } catch (e) {}
 }
 
+/* ---------- План бюджета по месяцам ---------- */
+function migrateBudgetPlans() {
+    let changed = false;
+    if (!budgetPlans || typeof budgetPlans !== 'object' || Array.isArray(budgetPlans)) { budgetPlans = {}; changed = true; }
+    const clean = {};
+    Object.keys(budgetPlans).forEach(k => {
+        if (!/^\d{4}-\d{2}$/.test(k) || !budgetPlans[k] || typeof budgetPlans[k] !== 'object' || Array.isArray(budgetPlans[k])) return;
+        clean[k] = {};
+        Object.keys(budgetPlans[k]).slice(0,100).forEach(cat => {
+            const n = Number(budgetPlans[k][cat]);
+            if (Number.isFinite(n) && n >= 0 && n < 1e12) clean[k][String(cat).slice(0,100)] = n;
+        });
+    });
+    if (JSON.stringify(clean) !== JSON.stringify(budgetPlans)) { budgetPlans = clean; changed = true; }
+    // Legacy global category limits become the initial plan for the current month.
+    if (!budgetPlans[selectedMonth]) { budgetPlans[selectedMonth] = {}; Object.keys(expenseCategories).forEach(c => { if (Number(expenseCategories[c]) > 0) budgetPlans[selectedMonth][c] = Number(expenseCategories[c]); }); changed = true; }
+    if (changed) localStorage.setItem('sage_budget_plans', JSON.stringify(budgetPlans));
+}
+
 /* ---------- Хелперы ---------- */
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 }); }
 /* Правильные русские склонения: plural(5, 'операция', 'операции', 'операций') */
@@ -1061,6 +1165,7 @@ function saveAll() {
     localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
     localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories));
     localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons));
+    localStorage.setItem('sage_budget_plans', JSON.stringify(budgetPlans));
     localStorage.setItem('sage_rates', JSON.stringify(rates));
     try { cloudSave(); } catch (e) {}
 }
@@ -1633,7 +1738,7 @@ function downloadBackup() {
     const data = {
         app: 'Считай Mini App', version: 8, exportedAt: new Date().toISOString(),
         isPro, currency: currentCurrency, rates,
-        expenseCategories, incomeCategories, categoryIcons, transactions, goals, deposits, debts, recurring
+        expenseCategories, incomeCategories, categoryIcons, budgetPlans, transactions, goals, deposits, debts, recurring
     };
     downloadFile(JSON.stringify(data, null, 2), `schitay-backup-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
 }
@@ -1655,6 +1760,7 @@ document.getElementById('restore-input').addEventListener('change', function (e)
                 debts = Array.isArray(data.debts) ? data.debts : [];
                 recurring = Array.isArray(data.recurring) ? data.recurring : [];
                 if (data.expenseCategories) expenseCategories = data.expenseCategories;
+                if (data.budgetPlans && typeof data.budgetPlans === 'object' && !Array.isArray(data.budgetPlans)) budgetPlans = data.budgetPlans;
                 if (data.incomeCategories) incomeCategories = data.incomeCategories;
                 if (data.categoryIcons && typeof data.categoryIcons === 'object' && !Array.isArray(data.categoryIcons)) { categoryIcons = data.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
                 if (data.rates && typeof data.rates === 'object' && !Array.isArray(data.rates)) rates = data.rates;
@@ -1769,7 +1875,7 @@ async function clearAllData() {
                 await fetch(API_URL + '/sync', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ initData: platform.initData, version: cloudVersion,
-                        state: { transactions: [], goals: [], deposits: [], debts: [], recurring: [], expenseCategories: {}, incomeCategories: [], categoryIcons: {} } })
+                        state: { transactions: [], goals: [], deposits: [], debts: [], recurring: [], expenseCategories: {}, incomeCategories: [], categoryIcons: {}, budgetPlans: {} } })
                 });
             } catch (e) {}
         }
@@ -1882,7 +1988,7 @@ function renderTransactionsList(filteredTxs) {
                 <div class="tx-icon" style="${tx.type === 'expense' ? `color:${(catTags[tx.category] || 'want') === 'need' ? 'var(--accent-sage)' : 'var(--gold)'};` : ''}"><span class="category-emoji">${catEmoji(tx.category, tx.type)}</span></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${familyIsFamily && transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}</div>
                 </div>
             </div>
             <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : 'var(--text-main)')};">
@@ -1901,7 +2007,7 @@ function renderTransactionsList(filteredTxs) {
         item.addEventListener('mousedown', startPress);
         item.addEventListener('mouseup', () => clearTimeout(pressTimer));
         item.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-        item.addEventListener('click', () => { if (longPressFired) { longPressFired = false; return; } openEditTx(tx.id); });
+        item.addEventListener('click', () => { if (longPressFired) { longPressFired = false; return; } if (familyIsFamily && familyRole === 'member') return uiAlert('В семейном режиме изменять и удалять операции может только владелец.'); openEditTx(tx.id); });
     });
 
     if (!shown.length) {
@@ -1985,6 +2091,9 @@ function renderUI() {
         visibleTxs = visibleTxs.slice().sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
     }
 
+    if (familyIsFamily && txAuthorFilter !== 'all') visibleTxs = visibleTxs.filter(t => String(t.authorId || '') === String(txAuthorFilter));
+    renderFamilyAuthorFilter();
+    renderFamilyOverview();
     renderTransactionsList(visibleTxs);
 
     document.getElementById('total-income').innerText = `${fmt(income)} ${currentCurrency}`;
@@ -2272,28 +2381,67 @@ async function fetchCbRates() {
 /* ---------- Планер бюджета: категории собираются через DOM API,
    а не inline-onclick — пользовательский ввод никогда не попадает
    в атрибуты/HTML-разметку (защита от хранимого XSS) ---------- */
+function getBudgetPlan(cat, month = selectedMonth) {
+    const monthPlans = budgetPlans && budgetPlans[month];
+    if (monthPlans && Object.prototype.hasOwnProperty.call(monthPlans, cat)) return Number(monthPlans[cat]) || 0;
+    return 0;
+}
+function openBudgetPlanModal(cat) {
+    if (familyIsFamily && familyRole !== 'owner') return uiAlert('План семейного бюджета изменяет только владелец.');
+    editingBudgetCategory = cat;
+    document.getElementById('budget-plan-title').innerText = `План: ${cat}`;
+    document.getElementById('budget-plan-amount').value = getBudgetPlan(cat);
+    document.getElementById('budget-plan-modal').style.display = 'flex';
+    setTimeout(() => { try { document.getElementById('budget-plan-amount').focus(); } catch(e) {} }, 60);
+}
+function closeBudgetPlanModal() { document.getElementById('budget-plan-modal').style.display = 'none'; editingBudgetCategory = ''; }
+function saveBudgetPlan() {
+    if (!editingBudgetCategory) return closeBudgetPlanModal();
+    if (familyIsFamily && familyRole !== 'owner') return uiAlert('План семейного бюджета изменяет только владелец.');
+    const amount = Number(document.getElementById('budget-plan-amount').value);
+    if (!Number.isFinite(amount) || amount < 0 || amount >= 1e12) return uiAlert('Введите корректный план.');
+    budgetPlans[selectedMonth] = budgetPlans[selectedMonth] || {};
+    budgetPlans[selectedMonth][editingBudgetCategory] = Math.round(amount * 100) / 100;
+    saveAll(); closeBudgetPlanModal(); renderUI();
+}
+function clearBudgetPlan() {
+    if (!editingBudgetCategory) return closeBudgetPlanModal();
+    if (budgetPlans[selectedMonth]) { delete budgetPlans[selectedMonth][editingBudgetCategory]; if (!Object.keys(budgetPlans[selectedMonth]).length) delete budgetPlans[selectedMonth]; }
+    saveAll(); closeBudgetPlanModal(); renderUI();
+}
 function renderBudgetPlanner(catTotals) {
     const container = document.getElementById('budget-list');
     container.innerHTML = '';
+    const canEdit = !familyIsFamily || familyRole === 'owner';
     Object.keys(expenseCategories).forEach(cat => {
-        const plan = expenseCategories[cat];
+        const plan = getBudgetPlan(cat);
         const fact = catTotals[cat] || 0;
         const pct = plan > 0 ? Math.min(Math.round((fact / plan) * 100), 100) : 0;
         const remaining = Math.max(0, plan - fact);
         const card = document.createElement('div');
-        card.style.marginBottom = "14px";
+        card.style.marginBottom = '14px';
+        const planLabel = plan > 0 ? `${fmt(plan)} ${currentCurrency}` : 'план не задан';
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:4px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:4px;gap:8px;">
                 <span><span class="category-emoji" style="width:24px;height:24px;font-size:13px;vertical-align:middle;">${catEmoji(cat, 'expense')}</span> <span data-cat-cycle title="нужное/желание — нажмите чтобы сменить" style="cursor:pointer;">${esc(cat)}</span></span>
-                <span class="hideable" style="font-weight:bold;">${fmt(fact)} / ${fmt(plan)} ${currentCurrency} (${pct}%)</span>
+                <button type="button" class="btn-small btn-outline" data-budget-edit style="font-size:10px;padding:5px 8px;">${canEdit ? 'Задать план' : 'План владельца'}</button>
             </div>
-            <div style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
-                <div style="width:${pct}%; height:100%; background:${pct > 90 ? 'var(--danger)' : 'var(--accent-sage)'}; transition: width 0.3s;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);margin-bottom:5px;">
+                <span>Факт: <b style="color:var(--text-main);">${fmt(fact)} ${currentCurrency}</b></span><span>${esc(planLabel)}</span>
             </div>
-            <div class="hideable" style="font-size:10px;color:var(--text-muted);margin-top:4px;">Осталось: ${fmt(remaining)} ${currentCurrency}</div>`;
+            <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:${pct > 90 ? 'var(--danger)' : 'var(--accent-sage)'};transition:width .3s;"></div>
+            </div>
+            <div class="hideable" style="font-size:10px;color:var(--text-muted);margin-top:4px;">${plan > 0 ? `Осталось: ${fmt(remaining)} ${currentCurrency}` : 'Нажмите «Задать план», чтобы добавить лимит на этот месяц.'}</div>`;
         card.querySelector('[data-cat-cycle]').addEventListener('click', () => cycleTag(cat));
+        const edit = card.querySelector('[data-budget-edit]');
+        edit.addEventListener('click', () => openBudgetPlanModal(cat));
+        if (!canEdit) edit.disabled = true;
         container.appendChild(card);
     });
+    if (!Object.keys(expenseCategories).length) {
+        container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Категорий пока нет. Добавьте их в «Опции → Категории».</div>';
+    }
 }
 
 function renderGoalsList() {
@@ -2399,6 +2547,15 @@ function renderYearlyChart() {
 
 /* ---------- События операции ---------- */
 const txModal = document.getElementById('tx-modal');
+const addTxFab = document.getElementById('add-tx-fab');
+if (addTxFab) addTxFab.addEventListener('click', () => openTxModal());
+function openTxModal(type = 'expense') {
+    triggerHaptic();
+    document.getElementById('tx-type').value = type;
+    onTxTypeChange();
+    document.getElementById('tx-modal').style.display = 'flex';
+    setTimeout(() => { try { document.getElementById('tx-amount').focus(); } catch(e) {} }, 60);
+}
 txModal.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('save-tx-btn').click(); } });
 document.getElementById('close-modal-btn').onclick = () => { txModal.style.display = 'none'; };
 document.getElementById('save-tx-btn').onclick = () => {
@@ -2415,14 +2572,18 @@ document.getElementById('save-tx-btn').onclick = () => {
             goal.current += base;
             transactions.unshift({
                 id: Date.now(), type: 'savings', category: `Копилка: ${goal.name}`,
-                amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now()
+                amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now(),
+                authorId: platform.user?.id ? Number(platform.user.id) : undefined,
+                authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : ''
             });
         }
     } else {
         const category = document.getElementById('tx-category').value;
         transactions.unshift({
             id: Date.now(), type, category, amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня',
-            trip: (type === 'expense' && tripMode) || undefined, ts: Date.now()
+            trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(),
+            authorId: platform.user?.id ? Number(platform.user.id) : undefined,
+            authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : ''
         });
     }
     if (type === 'income') applyAutoSavings(base);
@@ -2454,7 +2615,7 @@ let cloudSaveGeneration = 0;
 function getStatePayload() {
     return {
         transactions, goals, deposits, debts, recurring,
-        expenseCategories, incomeCategories, categoryIcons, rates, currency: currentCurrency,
+        expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
         catTags
     };
 }
@@ -2469,6 +2630,7 @@ function applyState(s) {
     if (s.catTags)             { catTags = s.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
     if (s.incomeCategories)    { incomeCategories = s.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
     if (s.categoryIcons)      { categoryIcons = s.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
+    if (s.budgetPlans && typeof s.budgetPlans === 'object' && !Array.isArray(s.budgetPlans)) { budgetPlans = s.budgetPlans; localStorage.setItem('sage_budget_plans', JSON.stringify(budgetPlans)); }
     if (s.rates)               { rates = s.rates; localStorage.setItem('sage_rates', JSON.stringify(rates));
                                  document.getElementById('rate-usd').value = rates.USD;
                                  document.getElementById('rate-eur').value = rates.EUR; }
@@ -2952,12 +3114,7 @@ function renderOnboarding() {
             <button class="btn-small btn-outline" onclick="document.getElementById('onboarding-slot').innerHTML=''; localStorage.setItem('sage_onboarded','1');">Пропустить</button>
         </div></div>`;
 }
-function openTxIncome() {
-    document.getElementById('tx-type').value = 'income';
-    onTxTypeChange();
-    document.getElementById('tx-modal').style.display = 'flex';
-    setTimeout(() => { try { document.getElementById('tx-amount').focus(); } catch (e) {} }, 60);
-}
+function openTxIncome() { openTxModal('income'); }
 
 /* ---------- Карточка месяца для шеринга ---------- */
 function buildShareImage() {
@@ -3230,6 +3387,8 @@ try { tg?.onEvent?.('activated', refreshFromCloud); } catch (e) {}
 
 /* ---------- Инициализация ---------- */
 (async function init() {
+    migrateMonthKeys();
+    migrateBudgetPlans();
     try { await cloudLoad(); } catch (e) { console.error('cloudLoad failed', e); }
     renderFamilyStatus();
     try { await handleInviteParam(); } catch (e) {}
