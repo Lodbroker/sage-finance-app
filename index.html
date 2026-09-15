@@ -554,14 +554,22 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div style="font-size: 11px; color: var(--text-muted);">Ключ выдаётся в разделе «Безопасность» выше (кнопка «Получить новый ключ»).</div>
         </div>
 
-        <div class="section-title">Семейный доступ</div>
+        <div class="section-title">Приглашения и семья</div>
         <div class="glass-card">
-            <div id="family-status" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Статус: локально (облако не подключено)</div>
-            <div style="display:flex; gap:8px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:5px;">📱 Пригласить в «Считай»</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Человек получит свой обычный аккаунт и личный бюджет. Доступа к вашей семье он не получит.</div>
+            <button class="btn-small" onclick="appInviteCreate()">Создать ссылку</button>
+            <div id="app-invite-box" style="display:none;font-size:11px;margin-top:8px;word-break:break-all;"></div>
+        </div>
+
+        <div class="glass-card" style="margin-top:10px;">
+            <div id="family-status" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Пока вы не состоите в семейном доступе.</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button class="btn-small" onclick="familyCreate()">Создать семью</button>
-                <button class="btn-small btn-outline" onclick="familyJoin()">Войти по коду</button>
+                <button class="btn-small btn-outline" onclick="familyJoin()">Ввести приглашение</button>
             </div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Владельцу приходит уведомление в бота, когда кто-то вступает по коду. Бесплатно — до 3 участников, PRO — безлимит.</div>
+            <div id="family-invite-box" style="display:none;margin-top:9px;font-size:11px;word-break:break-all;"></div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Только владелец может создавать приглашения. Новый участник сначала отправляет запрос, затем владелец подтверждает его в боте. Бесплатно — до 3 участников, PRO — безлимит.</div>
         </div>
 
         <div class="section-title">Резервные копии</div>
@@ -2272,22 +2280,6 @@ function renderChart(catTotals) {
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
-
-    // Центрируем сумму по фактическому центру кольца. При legend: right
-    // Chart.js сдвигает кольцо влево относительно canvas.
-    const positionChartTotal = () => {
-        const total = document.getElementById('chart-total');
-        const meta = chartInstance && chartInstance.getDatasetMeta(0);
-        const arc = meta && meta.data && meta.data[0];
-        if (!total || !arc) return;
-        total.style.inset = 'auto';
-        total.style.left = arc.x + 'px';
-        total.style.top = arc.y + 'px';
-        total.style.width = 'max-content';
-        total.style.transform = 'translate(-50%, -50%)';
-    };
-    positionChartTotal();
-    requestAnimationFrame(positionChartTotal);
     const hasData = Object.keys(catTotals).length > 0;
     const totalSum = hasData ? Object.values(catTotals).reduce((a, b) => a + b, 0) : 0;
     const sumEl = document.getElementById('chart-total-sum');
@@ -2426,8 +2418,7 @@ async function cloudLoad() {
     if (!platform.inTelegram) return;
     try {
         const r = await fetch(API_URL + '/state', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData: platform.initData })
         });
         if (!r.ok) return;
@@ -2435,56 +2426,91 @@ async function cloudLoad() {
         if (d.version) cloudVersion = d.version;
         if (d.state) applyState(d.state);
         if (d.botUsername) window._botUsername = d.botUsername;
-        if (d.inviteCode) {
-            document.getElementById('family-status').innerHTML =
-                `Статус: <b style="color:var(--accent-sage)">вы владелец семьи</b><br>${inviteLinkHTML(d.inviteCode)}`;
+        window._isFamily = !!d.isFamily;
+        window._familyRole = d.role || null;
+        const box = document.getElementById('family-status');
+        if (box) {
+            if (d.isFamily && d.role === 'owner') {
+                box.innerHTML = '👑 <b>Вы владелец семейного доступа.</b><br>Создавайте приглашения — новые участники попадут в семью только после вашего подтверждения.';
+            } else if (d.isFamily) {
+                box.innerHTML = '👤 <b>Вы участник семьи.</b><br>Создавать приглашения и добавлять новых людей может только владелец.';
+            } else {
+                box.innerHTML = '👤 <b>Личный режим.</b><br>Вы ещё не создали семейный доступ.';
+            }
         }
     } catch (e) { /* сервер недоступен — работаем локально */ }
 }
+
+function showFamilyInvite(token, botUsername) {
+    if (!token || !botUsername) return;
+    const link = `https://t.me/${botUsername}?startapp=fi_${token}`;
+    const box = document.getElementById('family-invite-box');
+    if (!box) return;
+    box.style.display = 'block';
+    box.innerHTML = `<div style="margin-bottom:5px;color:var(--text-muted);">Приглашение действует 7 дней и используется один раз.</div><a href="${link}" style="color:var(--accent-light);word-break:break-all;">${link}</a> <span data-copy-link="${jsAttr(link)}" style="cursor:pointer;color:var(--gold);white-space:nowrap;">📋 скопировать</span>`;
+}
+
 async function familyCreate() {
     if (!platform.inTelegram) return uiAlert('Семейный доступ работает только внутри Telegram (Mini App).');
     try {
-        const r = await fetch(API_URL + '/family', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ initData: platform.initData, action: 'create' })
-        });
+        const r = await fetch(API_URL + '/family', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData,action:'create'}) });
         const d = await r.json();
+        if (d.error === 'owner_only') return uiAlert('Только владелец может управлять семейным доступом.');
+        if (d.already) { await familyInviteCreate(); return; }
+        if (!d.ok) return uiAlert('Не удалось создать семейный доступ.');
+        window._isFamily = true; window._familyRole = 'owner';
         logEvent('family_create');
-        if (d.inviteCode) {
-            window._botUsername = d.botUsername || window._botUsername;
-            uiAlert('Семья создана! Отправьте родным ссылку-приглашение — по ней они попадут сразу в приложение, и всем подарят PRO на месяц. Вы получите уведомление в бота, когда кто-то вступит.');
-            document.getElementById('family-status').innerHTML =
-                `Статус: <b style="color:var(--accent-sage)">вы владелец семьи</b><br>${inviteLinkHTML(d.inviteCode)}`;
-        }
-    } catch (e) { uiAlert('Не удалось связаться с сервером. Проверьте API_URL в файле index.html'); }
+        await cloudLoad();
+        uiAlert('Семейный доступ создан. Теперь создайте приглашение и отправьте его близкому человеку.');
+        if (d.inviteToken) showFamilyInvite(d.inviteToken, d.botUsername || window._botUsername);
+        renderUI();
+    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
 }
-async function familyJoin(code) {
+
+async function familyInviteCreate() {
     if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
-    if (!code) {
-        openInputModal('Введите код приглашения (например K7X2-9PQ4)', '', (v) => familyJoin(v));
+    try {
+        const r = await fetch(API_URL + '/family', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData,action:'invite'}) });
+        const d = await r.json();
+        if (d.error === 'owner_only') return uiAlert('Только владелец семьи может создавать приглашения.');
+        if (d.error === 'no_family') return uiAlert('Сначала создайте семейный доступ.');
+        if (!d.ok) return uiAlert('Не удалось создать приглашение.');
+        showFamilyInvite(d.inviteToken, d.botUsername || window._botUsername);
+    } catch (e) { uiAlert('Ошибка связи с сервером.'); }
+}
+
+async function familyJoin(token) {
+    if (!platform.inTelegram) return uiAlert('Работает только внутри Telegram.');
+    if (!token) {
+        openInputModal('Введите приглашение в семью', '', (v) => familyJoin(v));
         return;
     }
-    code = String(code).trim().toUpperCase();
-    if (!code) return;
+    token = String(token).trim();
+    if (token.startsWith('fi_')) token = token.slice(3);
+    if (!token) return;
     try {
-        const r = await fetch(API_URL + '/family', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ initData: platform.initData, action: 'join', code: code.trim().toUpperCase() })
-        });
+        const r = await fetch(API_URL + '/family', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData,action:'request_join',token}) });
         const d = await r.json();
-        if (d.error === 'owner') { uiAlert('Вы владелец семьи с другими участниками — сначала попросите родных создать свою семью (иначе они потеряют общий бюджет).'); return; }
-        if (d.error === 'family_full') { openProModal(`👨‍👩‍👧 Бесплатная версия: в семье не более 3 участников. PRO открывает безлимит.`); return; }
-        if (d.error === 'rate') { uiAlert('Слишком много попыток. Подождите минуту.'); return; }
-        if (d.ok) {
-            logEvent('family_join');
-            localStorage.removeItem('sage_pending_invite');
-            uiAlert(d.proGranted ? 'Вы присоединились к семье! 🎁 Всем членам семьи подарен PRO на месяц.' : 'Вы присоединились к семье! Данные будут общими.');
-            await cloudLoad();
-            renderUI();
-        } else {
-            uiAlert('Код не найден. Проверьте и попробуйте снова.');
-        }
+        if (d.error === 'owner_has_family') return uiAlert('Вы владелец семьи с другими участниками. Сначала завершите текущую семейную группу.');
+        if (d.error === 'family_full') return uiAlert('В семье уже 3 участника. PRO открывает безлимит.');
+        if (d.error === 'already_member') return uiAlert('Вы уже состоите в этой семье.');
+        if (d.error === 'invite_expired' || d.error === 'invite_not_found') return uiAlert('Приглашение недействительно или уже использовано.');
+        if (d.ok && d.pending) { uiAlert('Запрос отправлен владельцу. После подтверждения вы получите уведомление в боте.'); return; }
+        uiAlert('Не удалось отправить запрос.');
     } catch (e) { uiAlert('Ошибка связи с сервером.'); }
+}
+
+async function appInviteCreate() {
+    if (!platform.inTelegram) return uiAlert('Приглашения работают внутри Telegram.');
+    try {
+        const r = await fetch(API_URL + '/app-invite', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initData:platform.initData,action:'create'}) });
+        const d = await r.json();
+        if (!d.ok) return uiAlert('Не удалось создать ссылку.');
+        const link = `https://t.me/${d.botUsername}?startapp=app_${d.token}`;
+        const box = document.getElementById('app-invite-box');
+        box.style.display='block';
+        box.innerHTML = `<a href="${link}" style="color:var(--accent-light);word-break:break-all;">${link}</a> <span data-copy-link="${jsAttr(link)}" style="cursor:pointer;color:var(--gold);white-space:nowrap;">📋 скопировать</span>`;
+    } catch(e) { uiAlert('Ошибка связи с сервером.'); }
 }
 
 /* ---------- Инсайты месяца, недельный лимит, стрики ---------- */
@@ -2843,11 +2869,12 @@ async function handleInviteParam() {
     if (!platform.inTelegram) return;
     const p = platform.startParam;
     if (!p) return;
-    if (/^[a-z0-9-]{4,14}$/i.test(p)) {
-        // П.7 аудита: клик по чужой ссылке не должен мгновенно переводить в чужую семью
-        uiConfirm(`Вступить в семью по коду ${p.toUpperCase()}? Ваши локальные данные будут заменены общими данными семьи.`, async () => {
-            await familyJoin(p.toUpperCase());
-        });
+    if (/^fi_[A-Za-z0-9_-]{20,100}$/.test(p)) {
+        uiConfirm('Вас приглашают в семейный доступ. Отправить запрос владельцу семьи?', async () => { await familyJoin(p.slice(3)); });
+        return;
+    }
+    if (/^app_[A-Za-z0-9_-]{20,100}$/.test(p)) {
+        uiAlert('🎉 Вас пригласили в «Считай». Вы можете пользоваться личным бюджетом независимо от семейного доступа.');
         return;
     }
     const tabs = { balance: 'dashboard', budget: 'budget', goals: 'goals', debts: 'goals', pro: 'pro', settings: 'settings' };
