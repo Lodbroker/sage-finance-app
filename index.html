@@ -110,15 +110,24 @@
 
         .glass-card { background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; margin: 12px 16px; position: relative; }
         .header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 16px; }
-        .header-actions { display:flex; gap:6px; align-items:center; flex:0 0 auto; min-width:0; }
-        .month-selector { width:118px !important; min-width:118px; max-width:118px; padding:6px 8px !important; font-size:12px !important; }
-        @media (max-width: 360px) {
-            .header { padding: 12px 10px; gap: 6px; }
-            .user-profile { min-width:0; flex:1 1 auto; }
-            .user-profile > div:last-child { min-width:0; overflow:hidden; }
-            .user-profile > div:last-child > div { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-            .month-selector { width:104px !important; min-width:104px; max-width:104px; font-size:11px !important; }
-            .icon-btn { width:32px; height:32px; flex:0 0 32px; }
+        .header-actions { display:flex; gap:6px; align-items:center; min-width:0; flex-shrink:0; }
+        #month-selector { min-width: 126px; max-width: 160px; }
+        #tx-toolbar { display:flex; gap:6px; align-items:center; flex:1; justify-content:flex-end; min-width:0; flex-wrap:wrap; }
+        #tx-author-filter, #tx-sort-filter { flex:0 0 auto; }
+        @media (max-width: 390px) {
+            .header { padding: 12px 10px; }
+            .user-profile { min-width:0; flex:1; }
+            .user-profile > div:last-child { min-width:0; }
+            #month-selector { min-width: 112px; width:112px !important; padding-left:7px !important; padding-right:7px !important; }
+            .icon-btn { width:32px; height:32px; }
+            #tx-toolbar { justify-content:flex-start; width:100%; flex-basis:100%; }
+            #tx-search { flex:1 1 130px; min-width:120px; }
+            #tx-author-filter, #tx-sort-filter { width:110px !important; }
+        }
+        @media (orientation: landscape) and (max-height: 600px) {
+            body::before { content:'Поверните телефон вертикально'; position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; text-align:center; padding:30px; background:var(--bg-grad-1); color:var(--text-main); font-size:18px; font-weight:800; }
+            body::after { content:'Считай работает в портретном режиме'; position:fixed; inset:0; z-index:10001; display:flex; align-items:center; justify-content:center; text-align:center; padding:70px 30px 30px; color:var(--text-muted); font-size:12px; pointer-events:none; }
+            .app-container { visibility:hidden; }
         }
         .user-profile { display: flex; align-items: center; gap: 10px; }
         .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-sage); display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; }
@@ -270,7 +279,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         </div>
         <div class="header-actions">
             <div class="icon-btn" id="privacy-toggle" title="Режим приватности"><i class="fa-solid fa-eye" id="privacy-icon"></i></div>
-            <select class="form-select month-selector" id="month-selector" aria-label="Выбор месяца"></select>
+            <select class="form-select" id="month-selector" style="width:auto; padding:6px 10px; font-size:12px;"></select>
         </div>
     </div>
 
@@ -348,8 +357,14 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
         <div class="glass-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; gap:8px; flex-wrap:wrap;">
                 <div style="font-size: 14px; font-weight: bold;">Операции за месяц</div>
-                <div style="display:flex; gap:6px; align-items:center; flex:1; justify-content:flex-end; min-width:210px;">
-                    <select class="form-select" id="tx-author-filter" style="width:105px; padding:6px 8px; font-size:11px; display:none;" onchange="setTxAuthorFilter(this.value)"></select>
+                <div id="tx-toolbar">
+                    <select class="form-select" id="tx-author-filter" style="width:112px; padding:6px 8px; font-size:11px; display:none;" onchange="setTxAuthorFilter(this.value)"></select>
+                    <select class="form-select" id="tx-sort-filter" style="width:112px; padding:6px 8px; font-size:11px;" onchange="setTxSort(this.value)">
+                        <option value="newest">Сначала новые</option>
+                        <option value="oldest">Сначала старые</option>
+                        <option value="amount_desc">Сумма ↓</option>
+                        <option value="amount_asc">Сумма ↑</option>
+                    </select>
                     <input class="form-input" id="tx-search" placeholder="Поиск операций..." style="width:130px; padding:6px 10px; font-size:12px;" oninput="setTxSearch(this.value);">
                 </div>
             </div>
@@ -419,11 +434,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 </div>
                 <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Простые проценты: вклад × ставка × дни / 365. Редактируйте сумму/ставку после создания.</div>
                 <div id="deposits-list"></div>
-            </div>
-            <div class="glass-card" id="deposit-partner-offers-card" style="margin-top:12px;">
-                <div style="font-size:15px;font-weight:bold;margin-bottom:6px;">🏦 Предложения банков-партнёров</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Подберите вклад или другой банковский продукт. Рекламные предложения отображаются только после ваших собственных вкладов.</div>
-                <div id="deposit-partner-banks-container"></div>
             </div>
         </div>
 
@@ -528,7 +538,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <div><div style="font-size:13px;font-weight:600;">Что сегодня по тратам и доходам?</div><div style="font-size:11px;color:var(--text-muted);">Если за день нет записей, бот напомнит вечером.</div></div>
                 <div class="toggle" id="daily-reminder-toggle" onclick="toggleDailyReminder()"></div>
             </div>
-            <div class="toggle-row" style="margin-top:10px;"><div><div style="font-size:13px;font-weight:600;">Следующий доход</div><div style="font-size:11px;color:var(--text-muted);">Дата используется для дневного лимита. Без неё приложение ничего не угадывает.</div></div><input type="date" class="form-input" id="next-income-date" style="width:145px;padding:8px;" onchange="saveNextIncomeDate()"></div>
             <div id="daily-reminder-options" style="margin-top:10px;">
                 <label class="form-label">Время напоминания</label>
                 <select class="form-select" id="daily-reminder-hour" onchange="saveDailyReminder()">
@@ -644,10 +653,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Категория</label>
                 <select class="form-select" id="tx-category"></select>
             </div>
-            <div class="form-group" id="tx-scope-group">
-                <label class="form-label">Видимость операции</label>
-                <select class="form-select" id="tx-scope"><option value="family">🏠 Общая — видна семье</option><option value="personal">👤 Личная — только мне</option></select>
-            </div>
             <div class="form-group">
                 <label class="form-label">Сумма</label>
                 <input type="number" class="form-input" id="tx-amount" placeholder="0" inputmode="decimal">
@@ -680,10 +685,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div class="form-group">
                 <label class="form-label">Категория</label>
                 <select class="form-select" id="edit-tx-category"></select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Видимость операции</label>
-                <select class="form-select" id="edit-tx-scope"><option value="family">🏠 Общая — видна семье</option><option value="personal">👤 Личная — только мне</option></select>
             </div>
             <div class="form-group">
                 <label class="form-label">Сумма</label>
@@ -829,7 +830,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Автоперевод % с каждого дохода (0 — выкл)</label>
                 <input type="number" class="form-input" id="new-goal-autopct" placeholder="10" inputmode="decimal">
             </div>
-            <div class="form-group"><label class="form-label">Видимость цели</label><select class="form-select" id="new-goal-scope"><option value="personal">👤 Личная</option><option value="family">🏠 Семейная — участники видят и пополняют</option></select></div>
             <button class="btn-submit" onclick="saveNewGoal()">Создать цель</button>
         </div>
     </div>
@@ -966,6 +966,7 @@ const platform = {
     get user() { return (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || null; },
     get startParam() { return (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ''; },
     ready() { try { tg?.ready(); tg?.expand(); } catch (e) {} },
+    lockPortrait() { try { if (tg?.lockOrientation && (!tg.isVersionAtLeast || tg.isVersionAtLeast('8.0'))) tg.lockOrientation(); } catch (e) {} },
     haptic(style) { try { if (style === 'success') tg?.HapticFeedback?.notificationOccurred?.('success'); else tg?.HapticFeedback?.impactOccurred?.(style || 'light'); } catch (e) {} },
     showAlert(msg) { if (tg && tg.showAlert) { try { tg.showAlert(String(msg)); return true; } catch (e) {} } window.alert(msg); return false; },
     openInvoice(link, cb) { if (tg && tg.openInvoice) { try { tg.openInvoice(link, cb); return true; } catch (e) {} } return false; },
@@ -981,6 +982,7 @@ function applySystemTelegramTheme() {
 if (tg) {
     try {
         platform.ready();
+        platform.lockPortrait();
         applySystemTelegramTheme();
         tg.onEvent?.('themeChanged', applySystemTelegramTheme);
         if (platform.user) {
@@ -1013,9 +1015,9 @@ let pinCode    = localStorage.getItem('sage_pin') || null;
 let rates      = JSON.parse(localStorage.getItem('sage_rates')) || { 'USD': 91.5, 'EUR': 100.2 };
 let tripMode   = localStorage.getItem('sage_trip') === '1';
 let weekLimit  = Number(localStorage.getItem('sage_weeklimit')) || 0;
-let nextIncomeDate = localStorage.getItem('sage_next_income_date') || '';
 let txSearchQuery = '';
 let txAuthorFilter = 'all';
+let txSortOrder = localStorage.getItem('sage_tx_sort') || 'newest';
 let txVisibleCount = 50;
 let budgetPlans = JSON.parse(localStorage.getItem('sage_budget_plans')) || {};
 let editingBudgetCategory = '';
@@ -1032,6 +1034,12 @@ function setTxSearch(value) {
 
 function setTxAuthorFilter(value) {
     txAuthorFilter = String(value || 'all');
+    txVisibleCount = 50;
+    renderUI();
+}
+function setTxSort(value) {
+    txSortOrder = ['newest','oldest','amount_desc','amount_asc'].includes(String(value)) ? String(value) : 'newest';
+    localStorage.setItem('sage_tx_sort', txSortOrder);
     txVisibleCount = 50;
     renderUI();
 }
@@ -1068,8 +1076,8 @@ function renderFamilyOverview() {
     const box = document.getElementById('family-overview-members');
     if (!card || !summary || !box) return;
     if (!familyIsFamily) { card.style.display='none'; return; }
-    const monthTxs = transactions.filter(t => t.mk === selectedMonth && (!familyIsFamily || t.scope !== 'personal'));
-    const expenses = monthTxs.filter(t => t.type === 'expense' && t.scope !== 'personal');
+    const monthTxs = transactions.filter(t => t.mk === selectedMonth);
+    const expenses = monthTxs.filter(t => t.type === 'expense');
     const total = expenses.reduce((s,t)=>s + Number(t.amountBase ?? t.amount ?? 0), 0);
     const by = new Map();
     expenses.forEach(t => {
@@ -1078,7 +1086,7 @@ function renderFamilyOverview() {
         const row = by.get(id) || {name, amount:0, count:0};
         row.amount += Number(t.amountBase ?? t.amount ?? 0); row.count++; by.set(id,row);
     });
-    summary.innerText = `На общие расходы в ${monthNameOf(selectedMonth).toLowerCase()} ушло ${fmt(total)} ${currentCurrency}`;
+    summary.innerText = `${monthNameOf(selectedMonth)} ${selectedMonth.slice(0,4)} · расходов ${fmt(total)} ${currentCurrency} · операций ${expenses.length}`;
     box.innerHTML = Array.from(by.values()).sort((a,b)=>b.amount-a.amount).map(r => `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--card-border);font-size:11px;"><span>👤 ${esc(r.name)} · ${r.count} ${plural(r.count,'операция','операции','операций')}</span><b>${fmt(r.amount)} ${currentCurrency}</b></div>`).join('') || '<div style="font-size:11px;color:var(--text-muted);">Расходов в этом месяце пока нет.</div>';
     card.style.display='block';
 }
@@ -1206,6 +1214,7 @@ function txDisplay(tx) {
     return `${fmt(tx.amountBase !== undefined ? tx.amountBase : tx.amount)} ${currentCurrency}`;
 }
 function saveAll() {
+    lastLocalMutationAt = Date.now();
     localStorage.setItem('sage_txs', JSON.stringify(transactions));
     localStorage.setItem('sage_goals', JSON.stringify(goals));
     localStorage.setItem('sage_deposits', JSON.stringify(deposits));
@@ -1222,22 +1231,17 @@ function saveAll() {
 /* ---------- Месячный селектор ---------- */
 function initMonthSelector() {
     const sel = document.getElementById('month-selector');
-    if (!sel) return;
-    const keep = selectedMonth;
     sel.innerHTML = '';
     const nowY = new Date();
-    const currentKey = monthKeyOf(nowY.getFullYear(), nowY.getMonth());
     for (let y = nowY.getFullYear() - 1; y <= nowY.getFullYear() + 1; y++) {
         allMonths.forEach((m, i) => {
             const opt = document.createElement('option');
-            opt.value = monthKeyOf(y, i);
-            opt.innerText = `${m} ${y}`;
+            opt.value = monthKeyOf(y, i); opt.innerText = `${m} ${y}`;
+            if (y === nowY.getFullYear() && i === nowY.getMonth()) opt.selected = true;
             sel.appendChild(opt);
         });
     }
-    const desired = keep && sel.querySelector(`option[value="${CSS.escape(keep)}"]`) ? keep : currentKey;
-    sel.value = desired;
-    selectedMonth = sel.value || currentKey;
+    selectedMonth = sel.value;
     resetTxPagination();
 }
 document.getElementById('month-selector').onchange = (e) => {
@@ -1419,12 +1423,6 @@ document.getElementById('pin-keypad').addEventListener('click', (e) => {
 function applyDailyReminderUI() {
     const t=document.getElementById('daily-reminder-toggle'), o=document.getElementById('daily-reminder-options'), s=document.getElementById('daily-reminder-hour');
     if(t) t.classList.toggle('on',dailyReminderEnabled); if(o) o.style.display=dailyReminderEnabled?'block':'none'; if(s) s.value=String(dailyReminderHour);
-}
-function saveNextIncomeDate(){
-    nextIncomeDate=document.getElementById('next-income-date')?.value||'';
-    if(nextIncomeDate) localStorage.setItem('sage_next_income_date',nextIncomeDate);
-    else localStorage.removeItem('sage_next_income_date');
-    renderUI();
 }
 async function saveDailyReminder() {
     dailyReminderHour=Number(document.getElementById('daily-reminder-hour')?.value)||20;
@@ -1920,7 +1918,7 @@ function saveNewCategory() {
     }
     categoryIcons[name] = icon;
     saveAll();
-    if (!platform.inTelegram) uiAlert('Категория сохранена на этом устройстве. Чтобы она появилась на телефоне, добавляйте её внутри Telegram Mini App.');
+    renderCategoryManager();
     document.getElementById('new-cat-name').value = '';
     closeAddCatModal(); renderUI();
 }
@@ -1941,10 +1939,8 @@ function saveNewGoal() {
     const name = document.getElementById('new-goal-name').value.trim();
     const target = Number(document.getElementById('new-goal-target').value);
     if (!name || !target) return uiAlert("Заполните название и сумму цели");
-    const scope = familyIsFamily && document.getElementById('new-goal-scope')?.value === 'family' ? 'family' : 'personal';
-    if (scope === 'family' && !isPro) { openProModal('🏠 Семейные цели доступны в PRO.'); return; }
-    if (!isPro && goals.filter(g => g.scope !== 'family').length >= 2) { openProModal(`🎯 Бесплатная версия: до 2 копилок, у вас уже ${goals.length}. В PRO копилок без лимита.`); return; }
-    goals.push({ id: Date.now(), name, target, current: 0, scope });
+    if (!isPro && goals.length >= 2) { openProModal(`🎯 Бесплатная версия: до 2 копилок, у вас уже ${goals.length}. В PRO копилок без лимита.`); return; }
+    goals.push({ id: Date.now(), name, target, current: 0 });
     saveAll();
     document.getElementById('new-goal-name').value = '';
     document.getElementById('new-goal-target').value = '';
@@ -2036,10 +2032,7 @@ function renderDashboardPlanner(income, expense, savings) {
     const currentBalance=income-expense-savings;
     const free=isCurrent ? Math.max(0,currentBalance-committed) : currentBalance;
     const f=document.getElementById('free-to-spend'); if(f) f.innerText=fmt(free)+' '+currentCurrency;
-    const hint=document.getElementById('free-to-spend-hint');
-    let dailyHint='';
-    if(isCurrent && nextIncomeDate){ const nd=new Date(nextIncomeDate+'T00:00:00'); const diff=Math.ceil((nd-new Date(nowD.getFullYear(),nowD.getMonth(),nowD.getDate()))/86400000); if(diff>0) dailyHint=`≈ ${fmt(free/diff)} ${currentCurrency} в день до ${nd.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})}`; }
-    if(hint) hint.innerText=isCurrent ? (dailyHint || (daysLeft>1?`≈ ${fmt(free/daysLeft)} ${currentCurrency} в день до конца месяца`:'Последний день месяца')) : 'Свободный остаток выбранного месяца';
+    const hint=document.getElementById('free-to-spend-hint'); if(hint) hint.innerText=isCurrent ? (daysLeft>1?`≈ ${fmt(free/daysLeft)} ${currentCurrency} в день до конца месяца`:'Последний день месяца') : 'Свободный остаток выбранного месяца';
     const box=document.getElementById('dashboard-upcoming-payments'); if(!box)return; box.innerHTML='';
     if(!recurring.length){box.innerHTML='<div style="font-size:11px;color:var(--text-muted);">Добавьте постоянные платежи — аренду, подписки, кредит или ЖКХ.</div>';return;}
     if(!upcoming.length){box.innerHTML='<div style="font-size:11px;color:var(--text-muted);">Ближайших платежей в выбранном месяце нет.</div>';return;}
@@ -2053,8 +2046,14 @@ function renderTransactionsList(filteredTxs) {
     txListEl.innerHTML = '';
 
     const isSearch = !!txSearchQuery;
-    const total = filteredTxs.length;
-    const shown = filteredTxs.slice(0, txVisibleCount);
+    const sortedTxs = filteredTxs.slice().sort((a,b) => {
+        if (txSortOrder === 'amount_desc') return Number(b.amountBase ?? b.amount ?? 0) - Number(a.amountBase ?? a.amount ?? 0);
+        if (txSortOrder === 'amount_asc') return Number(a.amountBase ?? a.amount ?? 0) - Number(b.amountBase ?? b.amount ?? 0);
+        const dt = Number(b.ts || 0) - Number(a.ts || 0);
+        return txSortOrder === 'oldest' ? -dt : dt;
+    });
+    const total = sortedTxs.length;
+    const shown = sortedTxs.slice(0, txVisibleCount);
     let previousMonth = null;
 
     shown.forEach(tx => {
@@ -2074,7 +2073,7 @@ function renderTransactionsList(filteredTxs) {
                 <div class="tx-icon" style="${tx.type === 'expense' ? `color:${(catTags[tx.category] || 'want') === 'need' ? 'var(--accent-sage)' : 'var(--gold)'};` : ''}"><span class="category-emoji">${catEmoji(tx.category, tx.type)}</span></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${familyIsFamily && transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}${familyIsFamily && tx.scope === 'personal' ? ' · 🔒 личная' : ''}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}</div>
                 </div>
             </div>
             <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : 'var(--text-main)')};">
@@ -2135,10 +2134,6 @@ function formatProDate(ts) {
     return new Date(ts).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' в ' + new Date(ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
 }
 function renderUI() {
-    const monthSel = document.getElementById('month-selector');
-    if (monthSel && selectedMonth) monthSel.value = selectedMonth;
-    const nextIncomeInput = document.getElementById('next-income-date');
-    if (nextIncomeInput && nextIncomeInput.value !== nextIncomeDate) nextIncomeInput.value = nextIncomeDate || '';
     const trialActive = isPro && trialUntil > Date.now();
     const trialExpired = trialUntil > 0 && trialUntil <= Date.now();
     if (isPro) {
@@ -2179,7 +2174,7 @@ function renderUI() {
 
     // Без поиска показываем операции выбранного месяца. При поиске ищем по всей истории,
     // включая предыдущие месяцы. Это позволяет найти, например, старую покупку по категории.
-    let visibleTxs = transactions.filter(t => t.mk === selectedMonth);
+    let visibleTxs = monthTxs;
     if (txSearchQuery) {
         const q = txSearchQuery;
         visibleTxs = transactions.filter(t => {
@@ -2195,6 +2190,7 @@ function renderUI() {
 
     if (familyIsFamily && txAuthorFilter !== 'all') visibleTxs = visibleTxs.filter(t => String(t.authorId || '') === String(txAuthorFilter));
     renderFamilyAuthorFilter();
+    const sortSel = document.getElementById('tx-sort-filter'); if (sortSel) sortSel.value = txSortOrder;
     renderFamilyOverview();
     renderTransactionsList(visibleTxs);
 
@@ -2210,7 +2206,7 @@ function renderUI() {
     const pKey = prevMonthKey(selectedMonth);
     let pInc = 0, pExp = 0;
     transactions.forEach(t => {
-        if (t.mk !== pKey || (familyIsFamily && t.scope === 'personal')) return;
+        if (t.mk !== pKey) return;
         const b = t.amountBase !== undefined ? t.amountBase : t.amount;
         if (t.type === 'income') pInc += b;
         if (t.type === 'expense') pExp += b;
@@ -2227,10 +2223,7 @@ function renderUI() {
     trEl('trend-expense', expense, pExp, true);
     const avgDaily = expense / elapsed;
     document.getElementById('avg-daily').innerText = `${fmt(avgDaily)} ${currentCurrency}`;
-    const daysInMonthForecast = new Date(Number(selectedMonth.slice(0,4)), Number(selectedMonth.slice(5,7)), 0).getDate();
-    const remainingDaysForecast = selectedMonth === curKey ? Math.max(0, daysInMonthForecast - nowD.getDate()) : 0;
-    const projectedExpenses = selectedMonth === curKey ? expense + avgDaily * remainingDaysForecast : expense;
-    document.getElementById('forecast-expense').innerText = `${fmt(projectedExpenses)} ${currentCurrency}`;
+    document.getElementById('forecast-expense').innerText = `${fmt(avgDaily * 30)} ${currentCurrency}`;
     renderDashboardPlanner(income, expense, savings);
 
     renderBudgetPlanner(catTotals);
@@ -2317,7 +2310,6 @@ function openEditTx(id) {
         catSel.disabled = true;
     }
     document.getElementById('edit-tx-amount').value = tx.amount;
-    const scopeEl=document.getElementById('edit-tx-scope'); if(scopeEl){scopeEl.value=tx.scope==='personal'?'personal':'family'; scopeEl.style.display=familyIsFamily?'block':'none';}
     document.getElementById('edit-tx-currency').value = tx.currency || '₽';
     document.getElementById('tx-edit-modal').style.display = 'flex';
 }
@@ -2340,7 +2332,6 @@ function saveEditTx() {
     tx.currency = currency;
     tx.amountBase = convertToBase(amount, currency);
     if (tx.type !== 'savings') tx.category = document.getElementById('edit-tx-category').value;
-    if (familyIsFamily && familyRole === 'owner') tx.scope=document.getElementById('edit-tx-scope')?.value==='personal'?'personal':'family';
     saveAll(); closeEditTx(); renderUI();
 }
 
@@ -2467,7 +2458,7 @@ async function fetchPartners() {
                 desc: String(b.desc || '').slice(0, 200),
                 url: String(b.url)
             }));
-            renderPartnerBanks();
+            if (partnerBanks.length) renderUI();
         }
     } catch (e) { /* останутся локальные значения */ }
 }
@@ -2565,7 +2556,7 @@ function renderGoalsList() {
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <div>
-                    <div style="font-weight:bold; font-size:14px;">${esc(g.name)} <span class="tag" style="font-size:8px;">${g.scope==='family'?'🏠 общая':'👤 личная'}</span></div>
+                    <div style="font-weight:bold; font-size:14px;">${esc(g.name)}</div>
                     <div class="hideable" style="font-size:12px; color:var(--text-muted);">${fmt(g.current)} / ${fmt(g.target)} ${currentCurrency}</div>
                 </div>
                 <span class="tag ${pct >= 100 ? 'green' : 'gold'}">${pct}%</span> <i class="fa-solid fa-trash" data-goal-del="${g.id}" title="Удалить цель" style="font-size:11px;color:var(--danger);cursor:pointer;"></i>
@@ -2581,28 +2572,21 @@ function renderGoalsList() {
 }
 
 function renderPartnerBanks() {
-    const renderInto = (container) => {
-        if (!container) return;
-        container.innerHTML = '';
-        if (!partnerBanks.length) {
-            container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Предложений пока нет.</div>';
-            return;
-        }
-        partnerBanks.forEach(bank => {
-            const card = document.createElement('div');
-            card.className = 'partner-card';
-            card.innerHTML = `
-                <div style="min-width:0;">
-                    <div style="font-weight: bold; font-size: 13px;">${esc(bank.name)}</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">${esc(bank.desc)}</div>
-                </div>
-                <button class="btn-small" data-bank-open>Подробнее</button>`;
-            card.querySelector('[data-bank-open]').addEventListener('click', () => { if (bank.url) window.open(bank.url, '_blank'); });
-            container.appendChild(card);
-        });
-    };
-    renderInto(document.getElementById('partner-banks-container'));
-    renderInto(document.getElementById('deposit-partner-banks-container'));
+    const container = document.getElementById('partner-banks-container');
+    container.innerHTML = '';
+    partnerBanks.forEach(bank => {
+        const card = document.createElement('div');
+        card.className = 'partner-card';
+        card.innerHTML = `
+            <div>
+                <div style="font-weight: bold; font-size: 13px;">${esc(bank.name)}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">${esc(bank.desc)}</div>
+            </div>
+            <button class="btn-small" data-bank-open>Забрать</button>`;
+        // URL — через addEventListener: исключена инъекция через кавычки в onclick
+        card.querySelector('[data-bank-open]').addEventListener('click', () => { if (bank.url) window.open(bank.url, '_blank'); });
+        container.appendChild(card);
+    });
 }
 
 function renderChart(catTotals) {
@@ -2655,8 +2639,8 @@ function renderYearlyChart() {
     const ctx = document.getElementById('yearlyChart').getContext('2d');
     if (yearlyChartInstance) yearlyChartInstance.destroy();
     const selY = selectedMonth.slice(0, 4); // год выбранного в селекторе месяца
-    const incByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'income' && (!familyIsFamily || t.scope !== 'personal')).reduce((s, t) => s + (t.amountBase || t.amount), 0));
-    const expByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'expense' && (!familyIsFamily || t.scope !== 'personal')).reduce((s, t) => s + (t.amountBase || t.amount), 0));
+    const incByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'income').reduce((s, t) => s + (t.amountBase || t.amount), 0));
+    const expByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'expense').reduce((s, t) => s + (t.amountBase || t.amount), 0));
     yearlyChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -2687,7 +2671,6 @@ document.getElementById('save-tx-btn').onclick = () => {
     const type = document.getElementById('tx-type').value;
     const amount = Number(document.getElementById('tx-amount').value);
     const currency = document.getElementById('tx-currency').value;
-    const scope = familyIsFamily && document.getElementById('tx-scope')?.value === 'personal' ? 'personal' : 'family';
     if (!amount || amount <= 0) return uiAlert("Введите корректную сумму");
     const base = convertToBase(amount, currency);
 
@@ -2699,7 +2682,6 @@ document.getElementById('save-tx-btn').onclick = () => {
             transactions.unshift({
                 id: Date.now(), type: 'savings', category: `Копилка: ${goal.name}`,
                 amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now(),
-                scope,
                 authorId: platform.user?.id ? Number(platform.user.id) : undefined,
                 authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : ''
             });
@@ -2708,7 +2690,7 @@ document.getElementById('save-tx-btn').onclick = () => {
         const category = document.getElementById('tx-category').value;
         transactions.unshift({
             id: Date.now(), type, category, amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня',
-            trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(), scope,
+            trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(),
             authorId: platform.user?.id ? Number(platform.user.id) : undefined,
             authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : ''
         });
@@ -2738,28 +2720,31 @@ let cloudSaveTimer = null, cloudVersion = 0;
 let cloudSaveInFlight = false;
 let cloudSavePending = false;
 let cloudSaveGeneration = 0;
+let lastLocalMutationAt = 0;
 
 function getStatePayload() {
     return {
         transactions, goals, deposits, debts, recurring,
-        nextIncomeDate,
         expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
         catTags
     };
 }
 function applyState(s) {
     if (!s) return;
-    if (s.transactions)        { transactions = s.transactions.map(t=>({...t,scope:t.scope==='personal'?'personal':'family'})); localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
-    if (s.goals)               { goals = s.goals.map(g=>({...g,scope:g.scope==='personal'?'personal':'family'})); localStorage.setItem('sage_goals', JSON.stringify(goals)); }
+    if (s.transactions)        { transactions = s.transactions; localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
+    if (s.goals)               { goals = s.goals; localStorage.setItem('sage_goals', JSON.stringify(goals)); }
     if (s.deposits)            { deposits = s.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
     if (s.debts)               { debts = s.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
     if (s.recurring)           { recurring = s.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
-    if (Object.prototype.hasOwnProperty.call(s, 'nextIncomeDate')) {
-        nextIncomeDate = /^\d{4}-\d{2}-\d{2}$/.test(String(s.nextIncomeDate || '')) ? String(s.nextIncomeDate) : '';
-        if (nextIncomeDate) localStorage.setItem('sage_next_income_date', nextIncomeDate);
-        else localStorage.removeItem('sage_next_income_date');
+    if (s.expenseCategories) {
+        const incoming = (typeof s.expenseCategories === 'object' && !Array.isArray(s.expenseCategories)) ? s.expenseCategories : {};
+        // Если локально только что добавили категорию, а сервер ещё не успел получить debounce-sync,
+        // пустой ответ не должен её стирать. Непустой серверный справочник считается авторитетным.
+        if (!(Object.keys(incoming).length === 0 && Object.keys(expenseCategories || {}).length > 0 && Date.now() - lastLocalMutationAt < 10000)) {
+            expenseCategories = incoming;
+            localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
+        }
     }
-    if (s.expenseCategories)   { expenseCategories = s.expenseCategories; localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories)); }
     if (s.catTags)             { catTags = s.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
     if (s.incomeCategories)    { incomeCategories = s.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
     if (s.categoryIcons)      { categoryIcons = s.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
@@ -3248,7 +3233,7 @@ function applyAutoSavings(incomeBase) {
 function renderOnboarding() {
     const slot = document.getElementById('onboarding-slot');
     if (!slot) return;
-    if (localStorage.getItem('sage_onboarded') || transactions.length > 0) { slot.innerHTML = ''; return; }
+    if (localStorage.getItem('sage_onboarded')) { slot.innerHTML = ''; return; }
     slot.innerHTML = `<div class="glass-card" style="border-color:rgba(82,183,136,0.4);">
         <div style="font-size:14px; font-weight:bold; margin-bottom:8px;">👋 Начнём за 3 шага</div>
         <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">1️⃣ Запишите доход &nbsp;·&nbsp; 2️⃣ Добавьте постоянные платежи &nbsp;·&nbsp; 3️⃣ Создайте копилку</div>
@@ -3523,12 +3508,23 @@ document.addEventListener('click', (e) => {
 let refreshInFlight = false;
 async function refreshFromCloud() {
     if (!platform.inTelegram || refreshInFlight) return;
+    // Не перетираем локальную правку ответом старого облачного состояния.
+    if (cloudSaveInFlight || cloudSavePending || Date.now() - lastLocalMutationAt < 5000) return;
     refreshInFlight = true;
     try { await cloudLoad(); renderUI(); } catch (e) {} finally { refreshInFlight = false; }
+}
+let cloudRefreshTimer = null;
+function startCloudRefreshLoop() {
+    clearInterval(cloudRefreshTimer);
+    if (!platform.inTelegram) return;
+    cloudRefreshTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') refreshFromCloud();
+    }, 12000);
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFromCloud(); });
 window.addEventListener('focus', refreshFromCloud);
 try { tg?.onEvent?.('activated', refreshFromCloud); } catch (e) {}
+startCloudRefreshLoop();
 
 /* ---------- Инициализация ---------- */
 (async function init() {
