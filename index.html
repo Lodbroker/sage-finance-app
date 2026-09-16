@@ -109,7 +109,17 @@
         }
 
         .glass-card { background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; margin: 12px 16px; position: relative; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 16px; }
+        .header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 16px; }
+        .header-actions { display:flex; gap:6px; align-items:center; flex:0 0 auto; min-width:0; }
+        .month-selector { width:118px !important; min-width:118px; max-width:118px; padding:6px 8px !important; font-size:12px !important; }
+        @media (max-width: 360px) {
+            .header { padding: 12px 10px; gap: 6px; }
+            .user-profile { min-width:0; flex:1 1 auto; }
+            .user-profile > div:last-child { min-width:0; overflow:hidden; }
+            .user-profile > div:last-child > div { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+            .month-selector { width:104px !important; min-width:104px; max-width:104px; font-size:11px !important; }
+            .icon-btn { width:32px; height:32px; flex:0 0 32px; }
+        }
         .user-profile { display: flex; align-items: center; gap: 10px; }
         .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-sage); display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; }
         .icon-btn { width: 34px; height: 34px; border-radius: 10px; background: var(--input-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; font-size: 14px; }
@@ -258,9 +268,9 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <div style="font-weight: bold; font-size: 14px;" id="user-name">Пользователь</div>
             </div>
         </div>
-        <div style="display:flex; gap:6px; align-items:center;">
+        <div class="header-actions">
             <div class="icon-btn" id="privacy-toggle" title="Режим приватности"><i class="fa-solid fa-eye" id="privacy-icon"></i></div>
-            <select class="form-select" id="month-selector" style="width: auto; padding: 6px 10px; font-size: 12px;"></select>
+            <select class="form-select month-selector" id="month-selector" aria-label="Выбор месяца"></select>
         </div>
     </div>
 
@@ -409,6 +419,11 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 </div>
                 <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Простые проценты: вклад × ставка × дни / 365. Редактируйте сумму/ставку после создания.</div>
                 <div id="deposits-list"></div>
+            </div>
+            <div class="glass-card" id="deposit-partner-offers-card" style="margin-top:12px;">
+                <div style="font-size:15px;font-weight:bold;margin-bottom:6px;">🏦 Предложения банков-партнёров</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Подберите вклад или другой банковский продукт. Рекламные предложения отображаются только после ваших собственных вкладов.</div>
+                <div id="deposit-partner-banks-container"></div>
             </div>
         </div>
 
@@ -1207,17 +1222,22 @@ function saveAll() {
 /* ---------- Месячный селектор ---------- */
 function initMonthSelector() {
     const sel = document.getElementById('month-selector');
+    if (!sel) return;
+    const keep = selectedMonth;
     sel.innerHTML = '';
     const nowY = new Date();
+    const currentKey = monthKeyOf(nowY.getFullYear(), nowY.getMonth());
     for (let y = nowY.getFullYear() - 1; y <= nowY.getFullYear() + 1; y++) {
         allMonths.forEach((m, i) => {
             const opt = document.createElement('option');
-            opt.value = monthKeyOf(y, i); opt.innerText = `${m} ${y}`;
-            if (y === nowY.getFullYear() && i === nowY.getMonth()) opt.selected = true;
+            opt.value = monthKeyOf(y, i);
+            opt.innerText = `${m} ${y}`;
             sel.appendChild(opt);
         });
     }
-    selectedMonth = sel.value;
+    const desired = keep && sel.querySelector(`option[value="${CSS.escape(keep)}"]`) ? keep : currentKey;
+    sel.value = desired;
+    selectedMonth = sel.value || currentKey;
     resetTxPagination();
 }
 document.getElementById('month-selector').onchange = (e) => {
@@ -1400,7 +1420,12 @@ function applyDailyReminderUI() {
     const t=document.getElementById('daily-reminder-toggle'), o=document.getElementById('daily-reminder-options'), s=document.getElementById('daily-reminder-hour');
     if(t) t.classList.toggle('on',dailyReminderEnabled); if(o) o.style.display=dailyReminderEnabled?'block':'none'; if(s) s.value=String(dailyReminderHour);
 }
-function saveNextIncomeDate(){ nextIncomeDate=document.getElementById('next-income-date')?.value||''; if(nextIncomeDate)localStorage.setItem('sage_next_income_date',nextIncomeDate);else localStorage.removeItem('sage_next_income_date'); renderUI(); }
+function saveNextIncomeDate(){
+    nextIncomeDate=document.getElementById('next-income-date')?.value||'';
+    if(nextIncomeDate) localStorage.setItem('sage_next_income_date',nextIncomeDate);
+    else localStorage.removeItem('sage_next_income_date');
+    renderUI();
+}
 async function saveDailyReminder() {
     dailyReminderHour=Number(document.getElementById('daily-reminder-hour')?.value)||20;
     dailyReminderTimezone=Intl.DateTimeFormat().resolvedOptions().timeZone || dailyReminderTimezone;
@@ -1895,6 +1920,7 @@ function saveNewCategory() {
     }
     categoryIcons[name] = icon;
     saveAll();
+    if (!platform.inTelegram) uiAlert('Категория сохранена на этом устройстве. Чтобы она появилась на телефоне, добавляйте её внутри Telegram Mini App.');
     document.getElementById('new-cat-name').value = '';
     closeAddCatModal(); renderUI();
 }
@@ -2109,6 +2135,10 @@ function formatProDate(ts) {
     return new Date(ts).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' в ' + new Date(ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
 }
 function renderUI() {
+    const monthSel = document.getElementById('month-selector');
+    if (monthSel && selectedMonth) monthSel.value = selectedMonth;
+    const nextIncomeInput = document.getElementById('next-income-date');
+    if (nextIncomeInput && nextIncomeInput.value !== nextIncomeDate) nextIncomeInput.value = nextIncomeDate || '';
     const trialActive = isPro && trialUntil > Date.now();
     const trialExpired = trialUntil > 0 && trialUntil <= Date.now();
     if (isPro) {
@@ -2437,7 +2467,7 @@ async function fetchPartners() {
                 desc: String(b.desc || '').slice(0, 200),
                 url: String(b.url)
             }));
-            if (partnerBanks.length) renderUI();
+            renderPartnerBanks();
         }
     } catch (e) { /* останутся локальные значения */ }
 }
@@ -2551,21 +2581,28 @@ function renderGoalsList() {
 }
 
 function renderPartnerBanks() {
-    const container = document.getElementById('partner-banks-container');
-    container.innerHTML = '';
-    partnerBanks.forEach(bank => {
-        const card = document.createElement('div');
-        card.className = 'partner-card';
-        card.innerHTML = `
-            <div>
-                <div style="font-weight: bold; font-size: 13px;">${esc(bank.name)}</div>
-                <div style="font-size: 11px; color: var(--text-muted);">${esc(bank.desc)}</div>
-            </div>
-            <button class="btn-small" data-bank-open>Забрать</button>`;
-        // URL — через addEventListener: исключена инъекция через кавычки в onclick
-        card.querySelector('[data-bank-open]').addEventListener('click', () => { if (bank.url) window.open(bank.url, '_blank'); });
-        container.appendChild(card);
-    });
+    const renderInto = (container) => {
+        if (!container) return;
+        container.innerHTML = '';
+        if (!partnerBanks.length) {
+            container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Предложений пока нет.</div>';
+            return;
+        }
+        partnerBanks.forEach(bank => {
+            const card = document.createElement('div');
+            card.className = 'partner-card';
+            card.innerHTML = `
+                <div style="min-width:0;">
+                    <div style="font-weight: bold; font-size: 13px;">${esc(bank.name)}</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">${esc(bank.desc)}</div>
+                </div>
+                <button class="btn-small" data-bank-open>Подробнее</button>`;
+            card.querySelector('[data-bank-open]').addEventListener('click', () => { if (bank.url) window.open(bank.url, '_blank'); });
+            container.appendChild(card);
+        });
+    };
+    renderInto(document.getElementById('partner-banks-container'));
+    renderInto(document.getElementById('deposit-partner-banks-container'));
 }
 
 function renderChart(catTotals) {
@@ -2705,6 +2742,7 @@ let cloudSaveGeneration = 0;
 function getStatePayload() {
     return {
         transactions, goals, deposits, debts, recurring,
+        nextIncomeDate,
         expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
         catTags
     };
@@ -2716,6 +2754,11 @@ function applyState(s) {
     if (s.deposits)            { deposits = s.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
     if (s.debts)               { debts = s.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
     if (s.recurring)           { recurring = s.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
+    if (Object.prototype.hasOwnProperty.call(s, 'nextIncomeDate')) {
+        nextIncomeDate = /^\d{4}-\d{2}-\d{2}$/.test(String(s.nextIncomeDate || '')) ? String(s.nextIncomeDate) : '';
+        if (nextIncomeDate) localStorage.setItem('sage_next_income_date', nextIncomeDate);
+        else localStorage.removeItem('sage_next_income_date');
+    }
     if (s.expenseCategories)   { expenseCategories = s.expenseCategories; localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories)); }
     if (s.catTags)             { catTags = s.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
     if (s.incomeCategories)    { incomeCategories = s.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
