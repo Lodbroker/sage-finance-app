@@ -97,6 +97,20 @@
             justify-content: center;
         }
 
+        html, body { overscroll-behavior-x: none; }
+        @media (orientation: landscape) and (max-width: 900px) {
+            body::before {
+                content: 'Поверните телефон вертикально';
+                position: fixed; inset: 0; z-index: 10000;
+                display: flex; align-items: center; justify-content: center;
+                padding: 24px; text-align: center;
+                background: var(--bg-grad-1); color: var(--text-main);
+                font-size: 18px; font-weight: 700;
+            }
+            body > * { visibility: hidden !important; }
+            body::before { visibility: visible !important; }
+        }
+
         .app-container {
             width: 100%;
             max-width: 480px;
@@ -241,6 +255,12 @@
         .tag.green { background: rgba(82,183,136,0.2); color: var(--accent-light); }
         .tag.red { background: rgba(230,57,70,0.2); color: #FFA8A8; }
         .tag.gold { background: rgba(255,209,102,0.2); color: var(--gold); }
+        @media (max-width: 380px) {
+            .tx-tools { min-width: 0 !important; }
+            #tx-search { width: 110px !important; }
+            #tx-author-filter { width: 95px !important; }
+            .sub-tabs { gap: 4px; }
+        }
     </style>
 </head>
 <body>
@@ -653,6 +673,14 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Категория</label>
                 <select class="form-select" id="tx-category"></select>
             </div>
+            <div class="form-group" id="tx-scope-group" style="display:none;">
+                <label class="form-label">Видимость</label>
+                <select class="form-select" id="tx-scope">
+                    <option value="family">🏠 Общая — видна семье</option>
+                    <option value="personal">👤 Личная — видна только мне</option>
+                </select>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:5px;">Личная операция не входит в семейный бюджет и аналитику.</div>
+            </div>
             <div class="form-group">
                 <label class="form-label">Сумма</label>
                 <input type="number" class="form-input" id="tx-amount" placeholder="0" inputmode="decimal">
@@ -696,6 +724,13 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                     <option value="₽">₽ Рубль</option>
                     <option value="$">$ Доллар</option>
                     <option value="€">€ Евро</option>
+                </select>
+            </div>
+            <div class="form-group" id="edit-tx-scope-group" style="display:none;">
+                <label class="form-label">Видимость</label>
+                <select class="form-select" id="edit-tx-scope">
+                    <option value="family">🏠 Общая — видна семье</option>
+                    <option value="personal">👤 Личная — видна только мне</option>
                 </select>
             </div>
             <button class="btn-submit" onclick="saveEditTx()">Сохранить</button>
@@ -829,6 +864,13 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div class="form-group">
                 <label class="form-label">Автоперевод % с каждого дохода (0 — выкл)</label>
                 <input type="number" class="form-input" id="new-goal-autopct" placeholder="10" inputmode="decimal">
+            </div>
+            <div class="form-group" id="new-goal-scope-group" style="display:none;">
+                <label class="form-label">Видимость</label>
+                <select class="form-select" id="new-goal-scope">
+                    <option value="personal">👤 Личная — только я</option>
+                    <option value="family">🏠 Общая — семейная копилка</option>
+                </select>
             </div>
             <button class="btn-submit" onclick="saveNewGoal()">Создать цель</button>
         </div>
@@ -1077,7 +1119,7 @@ function renderFamilyOverview() {
     if (!card || !summary || !box) return;
     if (!familyIsFamily) { card.style.display='none'; return; }
     const monthTxs = transactions.filter(t => t.mk === selectedMonth);
-    const expenses = monthTxs.filter(t => t.type === 'expense');
+    const expenses = monthTxs.filter(t => t.type === 'expense' && (!familyIsFamily || t.scope !== 'personal'));
     const total = expenses.reduce((s,t)=>s + Number(t.amountBase ?? t.amount ?? 0), 0);
     const by = new Map();
     expenses.forEach(t => {
@@ -1877,7 +1919,14 @@ function renderCatEmojiPicker(selected='💰') {
 }
 function openAddCatModal() { triggerHaptic(); renderCatEmojiPicker('💰'); document.getElementById('cat-modal').style.display = 'flex'; }
 function closeAddCatModal() { document.getElementById('cat-modal').style.display = 'none'; }
-function openAddGoalModal() { triggerHaptic(); document.getElementById('goal-modal').style.display = 'flex'; }
+function openAddGoalModal() {
+    triggerHaptic();
+    const g = document.getElementById('new-goal-scope-group');
+    if (g) g.style.display = familyIsFamily ? 'block' : 'none';
+    const s = document.getElementById('new-goal-scope');
+    if (s) s.value = 'personal';
+    document.getElementById('goal-modal').style.display = 'flex';
+}
 function closeAddGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
 
 function renderCategoryManager() {
@@ -1939,8 +1988,11 @@ function saveNewGoal() {
     const name = document.getElementById('new-goal-name').value.trim();
     const target = Number(document.getElementById('new-goal-target').value);
     if (!name || !target) return uiAlert("Заполните название и сумму цели");
-    if (!isPro && goals.length >= 2) { openProModal(`🎯 Бесплатная версия: до 2 копилок, у вас уже ${goals.length}. В PRO копилок без лимита.`); return; }
-    goals.push({ id: Date.now(), name, target, current: 0 });
+    const scope = familyIsFamily ? (document.getElementById('new-goal-scope')?.value || 'personal') : 'personal';
+    const familyGoalsCount = goals.filter(g => g.scope !== 'personal').length;
+    if (scope === 'family' && !isPro) { openProModal('🎯 Общие семейные копилки доступны в PRO. Личная копилка доступна без PRO.'); return; }
+    if (!isPro && goals.filter(g => g.scope === 'personal' || !g.scope).length >= 2) { openProModal(`🎯 Бесплатная версия: до 2 личных копилок, у вас уже достигнут лимит. В PRO копилок без лимита.`); return; }
+    goals.push({ id: 'goal-' + Date.now() + '-' + Math.random().toString(36).slice(2,7), name, target, current: 0, scope });
     saveAll();
     document.getElementById('new-goal-name').value = '';
     document.getElementById('new-goal-target').value = '';
@@ -1996,6 +2048,8 @@ function onTxTypeChange() {
             });
         }
     }
+    const scopeGroup = document.getElementById('tx-scope-group');
+    if (scopeGroup) scopeGroup.style.display = (familyIsFamily && type !== 'savings') ? 'block' : 'none';
 }
 function populateGoalDropdown() {
     const select = document.getElementById('tx-goal-target');
@@ -2073,7 +2127,7 @@ function renderTransactionsList(filteredTxs) {
                 <div class="tx-icon" style="${tx.type === 'expense' ? `color:${(catTags[tx.category] || 'want') === 'need' ? 'var(--accent-sage)' : 'var(--gold)'};` : ''}"><span class="category-emoji">${catEmoji(tx.category, tx.type)}</span></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}${familyIsFamily && tx.scope === 'personal' ? ' · 🔒 личная' : ''}</div>
                 </div>
             </div>
             <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : 'var(--text-main)')};">
@@ -2311,6 +2365,10 @@ function openEditTx(id) {
     }
     document.getElementById('edit-tx-amount').value = tx.amount;
     document.getElementById('edit-tx-currency').value = tx.currency || '₽';
+    const editScopeGroup = document.getElementById('edit-tx-scope-group');
+    const editScope = document.getElementById('edit-tx-scope');
+    if (editScopeGroup) editScopeGroup.style.display = (familyIsFamily && tx.type !== 'savings') ? 'block' : 'none';
+    if (editScope) editScope.value = tx.scope === 'personal' ? 'personal' : 'family';
     document.getElementById('tx-edit-modal').style.display = 'flex';
 }
 function closeEditTx() {
@@ -2332,6 +2390,7 @@ function saveEditTx() {
     tx.currency = currency;
     tx.amountBase = convertToBase(amount, currency);
     if (tx.type !== 'savings') tx.category = document.getElementById('edit-tx-category').value;
+    if (familyIsFamily && tx.type !== 'savings') tx.scope = document.getElementById('edit-tx-scope')?.value === 'personal' ? 'personal' : 'family';
     saveAll(); closeEditTx(); renderUI();
 }
 
@@ -2546,25 +2605,31 @@ function renderBudgetPlanner(catTotals) {
 
 function renderGoalsList() {
     const container = document.getElementById('goals-list');
+    if (!container) return;
     container.innerHTML = '';
     let goalsTotal = 0;
     goals.forEach(g => {
-        goalsTotal += (g.current || 0);
-        const pct = Math.min(Math.round((g.current / g.target) * 100), 100);
+        const current = Number(g.current || 0);
+        const target = Math.max(1, Number(g.target || 0));
+        goalsTotal += current;
+        const pct = Math.min(Math.round((current / target) * 100), 100);
+        const scope = g.scope === 'family' ? '🏠 общая' : '👤 личная';
         const card = document.createElement('div');
-        card.style.marginBottom = "16px";
+        card.style.cssText = 'margin-bottom:18px;padding-bottom:2px;';
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <div>
-                    <div style="font-weight:bold; font-size:14px;">${esc(g.name)}</div>
-                    <div class="hideable" style="font-size:12px; color:var(--text-muted);">${fmt(g.current)} / ${fmt(g.target)} ${currentCurrency}</div>
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 24px;align-items:center;column-gap:8px;margin-bottom:7px;">
+                <div style="min-width:0;">
+                    <div style="font-weight:bold;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(g.name)}</div>
+                    <div class="hideable" style="font-size:12px;color:var(--text-muted);margin-top:2px;">${fmt(current)} / ${fmt(target)} ${currentCurrency} · ${scope}</div>
                 </div>
-                <span class="tag ${pct >= 100 ? 'green' : 'gold'}">${pct}%</span> <i class="fa-solid fa-trash" data-goal-del="${g.id}" title="Удалить цель" style="font-size:11px;color:var(--danger);cursor:pointer;"></i>
+                <span class="tag ${pct >= 100 ? 'green' : 'gold'}" style="justify-self:stretch;text-align:center;">${pct}%</span>
+                <i class="fa-solid fa-trash" data-goal-del="${jsAttr(g.id)}" title="Удалить цель" style="font-size:11px;color:var(--danger);cursor:pointer;text-align:center;"></i>
             </div>
-            <div style="height:10px; background:rgba(255,255,255,0.08); border-radius:5px; overflow:hidden;">
-                <div style="width:${pct}%; height:100%; background:var(--gold); transition: width 0.3s;"></div>
+            <div style="height:8px;width:100%;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:var(--gold);transition:width .3s;"></div>
             </div>`;
-        card.querySelector('[data-goal-del]').addEventListener('click', () => deleteGoal(g.id));
+        const del = card.querySelector('[data-goal-del]');
+        if (del) del.addEventListener('click', () => deleteGoal(g.id));
         container.appendChild(card);
     });
     const gt = document.getElementById('goals-total');
@@ -2683,7 +2748,8 @@ document.getElementById('save-tx-btn').onclick = () => {
                 id: Date.now(), type: 'savings', category: `Копилка: ${goal.name}`,
                 amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now(),
                 authorId: platform.user?.id ? Number(platform.user.id) : undefined,
-                authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : ''
+                authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '',
+                scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
             });
         }
     } else {
@@ -2692,7 +2758,8 @@ document.getElementById('save-tx-btn').onclick = () => {
             id: Date.now(), type, category, amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня',
             trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(),
             authorId: platform.user?.id ? Number(platform.user.id) : undefined,
-            authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : ''
+            authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '',
+            scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
         });
     }
     if (type === 'income') applyAutoSavings(base);
@@ -2724,7 +2791,10 @@ let lastLocalMutationAt = 0;
 
 function getStatePayload() {
     return {
-        transactions, goals, deposits, debts, recurring,
+        transactions, goals,
+        personalTransactions: (transactions || []).filter(t => t.scope === 'personal'),
+        personalGoals: (goals || []).filter(g => g.scope === 'personal'),
+        deposits, debts, recurring,
         expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
         catTags
     };
@@ -2732,7 +2802,7 @@ function getStatePayload() {
 function applyState(s) {
     if (!s) return;
     if (s.transactions)        { transactions = s.transactions; localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
-    if (s.goals)               { goals = s.goals; localStorage.setItem('sage_goals', JSON.stringify(goals)); }
+    if (s.goals)               { goals = s.goals.map(g => ({ ...g, scope: g.scope === 'family' ? 'family' : 'personal' })); localStorage.setItem('sage_goals', JSON.stringify(goals)); }
     if (s.deposits)            { deposits = s.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
     if (s.debts)               { debts = s.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
     if (s.recurring)           { recurring = s.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
@@ -3519,7 +3589,7 @@ function startCloudRefreshLoop() {
     if (!platform.inTelegram) return;
     cloudRefreshTimer = setInterval(() => {
         if (document.visibilityState === 'visible') refreshFromCloud();
-    }, 12000);
+    }, 5000);
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFromCloud(); });
 window.addEventListener('focus', refreshFromCloud);
