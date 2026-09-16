@@ -2824,6 +2824,7 @@ document.getElementById('currency-select').onchange = (e) => {
    ============================================================ */
 const API_URL = 'https://sage-api.ivan-xls.workers.dev';
 let cloudSaveTimer = null, cloudVersion = 0;
+let cloudRetryTimer = null;
 let cloudSaveInFlight = false;
 let cloudSavePending = false;
 let cloudSaveGeneration = 0;
@@ -2837,44 +2838,94 @@ function getStatePayload() {
         personalSettings: { nextIncomeDate }
     };
 }
-function applyState(s) {
-    if (!s) return;
-    if (s.transactions)        { transactions = s.transactions; localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
-    if (s.goals)               { goals = s.goals; localStorage.setItem('sage_goals', JSON.stringify(goals)); }
-    if (s.deposits)            { deposits = s.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
-    if (s.debts)               { debts = s.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
-    if (s.recurring)           { recurring = s.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
-    if (s.expenseCategories) {
-        const incoming = (typeof s.expenseCategories === 'object' && !Array.isArray(s.expenseCategories)) ? s.expenseCategories : {};
-        // Если локально только что добавили категорию, а сервер ещё не успел получить debounce-sync,
-        // пустой ответ не должен её стирать. Непустой серверный справочник считается авторитетным.
-        if (!(Object.keys(incoming).length === 0 && Object.keys(expenseCategories || {}).length > 0 && Date.now() - lastLocalMutationAt < 10000)) {
-            expenseCategories = incoming;
-            localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
-        }
+function entityStamp(x) {
+    if (!x || typeof x !== 'object') return 0;
+    const a = Number(x.ts || 0);
+    const b = Date.parse(x.updatedAt || x.updated_at || x.createdAt || x.created_at || '') || 0;
+    return Math.max(Number.isFinite(a) ? a : 0, Number.isFinite(b) ? b : 0);
+}
+function mergeEntityArrays(localArr, incomingArr, limit = 5000) {
+    const byId = new Map();
+    (Array.isArray(incomingArr) ? incomingArr : []).forEach(x => {
+        if (!x || typeof x !== 'object') return;
+        const id = x.id == null ? '' : String(x.id);
+        if (id) byId.set(id, x);
+    });
+    (Array.isArray(localArr) ? localArr : []).forEach(x => {
+        if (!x || typeof x !== 'object') return;
+        const id = x.id == null ? '' : String(x.id);
+        if (!id) return;
+        const old = byId.get(id);
+        // Локальная новая сущность не должна исчезнуть из-за ответа старого сервера.
+        // Для одного id более свежая версия побеждает.
+        if (!old || entityStamp(x) >= entityStamp(old)) byId.set(id, x);
+    });
+    const out = Array.from(byId.values());
+    out.sort((a,b) => entityStamp(b) - entityStamp(a));
+    return out.slice(0, limit);
+}
+function mergeState(localState, incomingState) {
+    const local = localState && typeof localState === 'object' ? localState : {};
+    const incoming = incomingState && typeof incomingState === 'object' ? incomingState : {};
+    const out = { ...incoming, ...local };
+    for (const k of ['transactions','goals','deposits','debts','recurring']) {
+        out[k] = mergeEntityArrays(local[k], incoming[k], k === 'transactions' ? 5000 : 500);
     }
-    if (s.catTags)             { catTags = s.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
-    if (s.incomeCategories)    { incomeCategories = s.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
-    if (s.categoryIcons)      { categoryIcons = s.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
-    if (s.budgetPlans && typeof s.budgetPlans === 'object' && !Array.isArray(s.budgetPlans)) { budgetPlans = s.budgetPlans; localStorage.setItem('sage_budget_plans', JSON.stringify(budgetPlans)); }
-    if (s.rates)               { rates = s.rates; localStorage.setItem('sage_rates', JSON.stringify(rates));
-                                 document.getElementById('rate-usd').value = rates.USD;
-                                 document.getElementById('rate-eur').value = rates.EUR; }
-    if (s.currency)            { currentCurrency = s.currency; localStorage.setItem('sage_currency', currentCurrency);
-                                 document.getElementById('currency-select').value = currentCurrency; }
-    if (s.personalSettings && typeof s.personalSettings === 'object') {
-        nextIncomeDate = String(s.personalSettings.nextIncomeDate || '');
+    const mergeObj = (a,b) => ({
+        ...((b && typeof b === 'object' && !Array.isArray(b)) ? b : {}),
+        ...((a && typeof a === 'object' && !Array.isArray(a)) ? a : {})
+    });
+    out.expenseCategories = mergeObj(local.expenseCategories, incoming.expenseCategories);
+    out.categoryIcons = mergeObj(local.categoryIcons, incoming.categoryIcons);
+    out.catTags = mergeObj(local.catTags, incoming.catTags);
+    out.budgetPlans = mergeObj(local.budgetPlans, incoming.budgetPlans);
+    const li = Array.isArray(local.incomeCategories) ? local.incomeCategories : [];
+    const ii = Array.isArray(incoming.incomeCategories) ? incoming.incomeCategories : [];
+    out.incomeCategories = [...new Set([...ii, ...li])].slice(0,100);
+    return out;
+}
+function applyState(s, options = {}) {
+    if (!s) return;
+    const useMerge = options.merge === true;
+    const incoming = s;
+    const merged = useMerge ? mergeState({
+        transactions, goals, deposits, debts, recurring,
+        expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
+        catTags, personalSettings: { nextIncomeDate }
+    }, incoming) : incoming;
+    const data = merged;
+    if (data.transactions)   { transactions = data.transactions; localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
+    if (data.goals)          { goals = data.goals; localStorage.setItem('sage_goals', JSON.stringify(goals)); }
+    if (data.deposits)       { deposits = data.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
+    if (data.debts)          { debts = data.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
+    if (data.recurring)      { recurring = data.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
+    if (data.expenseCategories) {
+        const incomingCats = (typeof data.expenseCategories === 'object' && !Array.isArray(data.expenseCategories)) ? data.expenseCategories : {};
+        expenseCategories = incomingCats;
+        localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
+    }
+    if (data.catTags)        { catTags = data.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
+    if (data.incomeCategories) { incomeCategories = data.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
+    if (data.categoryIcons)  { categoryIcons = data.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
+    if (data.budgetPlans && typeof data.budgetPlans === 'object' && !Array.isArray(data.budgetPlans)) { budgetPlans = data.budgetPlans; localStorage.setItem('sage_budget_plans', JSON.stringify(budgetPlans)); }
+    if (data.rates)          { rates = data.rates; localStorage.setItem('sage_rates', JSON.stringify(rates));
+                               document.getElementById('rate-usd').value = rates.USD;
+                               document.getElementById('rate-eur').value = rates.EUR; }
+    if (data.currency)       { currentCurrency = data.currency; localStorage.setItem('sage_currency', currentCurrency);
+                               document.getElementById('currency-select').value = currentCurrency; }
+    if (data.personalSettings && typeof data.personalSettings === 'object') {
+        nextIncomeDate = String(data.personalSettings.nextIncomeDate || '');
         if (nextIncomeDate) localStorage.setItem('sage_next_income_date', nextIncomeDate);
         else localStorage.removeItem('sage_next_income_date');
         const ni = document.getElementById('next-income-date'); if (ni) ni.value = nextIncomeDate;
     }
-    if (Object.prototype.hasOwnProperty.call(s, 'proUntil') || Object.prototype.hasOwnProperty.call(s, 'isPro')) {
-        proUntil = Number(s.proUntil) || 0;
-        trialUntil = Number(s.trialUntil) || 0;
-        isPro = !!s.isPro && proUntil > Date.now();
+    if (Object.prototype.hasOwnProperty.call(data, 'proUntil') || Object.prototype.hasOwnProperty.call(data, 'isPro')) {
+        proUntil = Number(data.proUntil) || 0;
+        trialUntil = Number(data.trialUntil) || 0;
+        isPro = !!data.isPro && proUntil > Date.now();
         localStorage.setItem('sage_pro_until', String(proUntil));
         localStorage.setItem('sage_trial_until', String(trialUntil));
-        trialUsed = !!s.usedTrial; localStorage.setItem('sage_trial_used', trialUsed ? 'true' : 'false');
+        trialUsed = !!data.usedTrial; localStorage.setItem('sage_trial_used', trialUsed ? 'true' : 'false');
         localStorage.setItem('sage_is_pro', isPro ? 'true' : 'false');
     }
 }
@@ -2903,27 +2954,28 @@ async function cloudSave() {
             const d = await r.json().catch(() => null);
 
             if (d && d.conflict) {
-                // НИКОГДА не продолжаем отправлять старый локальный state с новой version.
-                // Иначе ответ conflict мог превратиться в последующую перезапись данных бота.
-                if (d.state) applyState(d.state);
+                // Конфликт не означает «забыть локальную правку». Сохраняем локальный
+                // snapshot, сливаем его с серверным и отправляем повторно уже с новой version.
+                const localBeforeConflict = getStatePayload();
+                if (d.state) applyState(mergeState(localBeforeConflict, d.state));
                 if (d.version) cloudVersion = Number(d.version);
                 renderUI();
-                if (sentGeneration === cloudSaveGeneration) {
-                    uiAlert('Данные на сервере изменились. Загружена актуальная версия.');
-                } else {
-                    // Пока запрос шёл, пользователь уже сделал новые правки — после загрузки
-                    // актуальной версии дадим им отдельный чистый sync.
-                    cloudSavePending = true;
-                }
+                cloudSavePending = true;
                 return;
             }
 
             if (d && d.version) cloudVersion = Number(d.version);
             if (!r.ok || !d || d.error) {
                 console.warn('[schitay] cloud sync failed', r.status, d);
+                cloudSavePending = true;
+                clearTimeout(cloudRetryTimer);
+                cloudRetryTimer = setTimeout(() => { if (cloudSavePending) cloudSave(); }, 5000);
             }
         } catch (e) {
             console.warn('[schitay] cloud sync unavailable', e);
+            cloudSavePending = true;
+            clearTimeout(cloudRetryTimer);
+            cloudRetryTimer = setTimeout(() => { if (cloudSavePending) cloudSave(); }, 5000);
         } finally {
             cloudSaveInFlight = false;
             // Если правки появились во время запроса или конфликт был обработан,
@@ -2938,7 +2990,7 @@ async function cloudSave() {
         }
     }, 1500);
 }
-async function cloudLoad() {
+async function cloudLoad(options = {}) {
     if (!platform.inTelegram) return;
     try {
         const r = await fetch(API_URL + '/state', {
@@ -2949,7 +3001,7 @@ async function cloudLoad() {
         if (!r.ok) return;
         const d = await r.json();
         if (d.version) cloudVersion = Number(d.version);
-        if (d.state) applyState(d.state);
+        if (d.state) applyState(d.state, { merge: options.merge === true });
         if (d.botUsername) window._botUsername = d.botUsername;
         if (typeof d.isFamily === 'boolean') familyIsFamily = d.isFamily;
         if (d.role) familyRole = d.role;
@@ -3623,9 +3675,9 @@ let refreshInFlight = false;
 async function refreshFromCloud() {
     if (!platform.inTelegram || refreshInFlight) return;
     // Не перетираем локальную правку ответом старого облачного состояния.
-    if (cloudSaveInFlight || cloudSavePending || Date.now() - lastLocalMutationAt < 5000) return;
+    if (cloudSaveInFlight || cloudSavePending) return;
     refreshInFlight = true;
-    try { await cloudLoad(); renderUI(); } catch (e) {} finally { refreshInFlight = false; }
+    try { await cloudLoad({ merge: true }); renderUI(); } catch (e) {} finally { refreshInFlight = false; }
 }
 let cloudRefreshTimer = null;
 function startCloudRefreshLoop() {
