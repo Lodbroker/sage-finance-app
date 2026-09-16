@@ -125,14 +125,14 @@
         .glass-card { background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; margin: 12px 16px; position: relative; }
         .header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 16px; }
         .header-actions { display:flex; gap:6px; align-items:center; min-width:0; flex-shrink:0; }
-        #month-selector { min-width: 126px; max-width: 160px; }
+        #month-selector { min-width: 132px; width:132px !important; max-width:132px; font-size:11px !important; }
         #tx-toolbar { display:flex; gap:6px; align-items:center; flex:1; justify-content:flex-end; min-width:0; flex-wrap:wrap; }
         #tx-author-filter, #tx-sort-filter { flex:0 0 auto; }
         @media (max-width: 390px) {
             .header { padding: 12px 10px; }
             .user-profile { min-width:0; flex:1; }
             .user-profile > div:last-child { min-width:0; }
-            #month-selector { min-width: 112px; width:112px !important; padding-left:7px !important; padding-right:7px !important; }
+            #month-selector { min-width: 132px; width:132px !important; max-width:132px; padding-left:7px !important; padding-right:7px !important; font-size:11px !important; }
             .icon-btn { width:32px; height:32px; }
             #tx-toolbar { justify-content:flex-start; width:100%; flex-basis:100%; }
             #tx-search { flex:1 1 130px; min-width:120px; }
@@ -643,6 +643,19 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <button class="btn-submit" style="background: transparent; border: 1px solid var(--card-border); color: var(--text-main);" onclick="document.getElementById('restore-input').click()"><i class="fa-solid fa-upload"></i> Восстановить из файла</button>
         </div>
 
+        <div class="glass-card" style="margin-top:0;">
+            <div class="toggle-row">
+                <div>
+                    <div style="font-size:13px;font-weight:600;">Следующий доход</div>
+                    <div style="font-size:11px;color:var(--text-muted);">Дата используется для расчёта дневного лимита. Если даты нет, приложение ничего не угадывает.</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+                <input type="date" class="form-input" id="next-income-date" style="flex:1;min-width:0;">
+                <button type="button" class="btn-small btn-outline" onclick="clearNextIncomeDate()">Очистить</button>
+            </div>
+        </div>
+
         <div class="section-title">Связь и опасная зона</div>
         <button class="btn-submit" style="margin: 4px 16px 4px; width: calc(100% - 32px); background: rgba(255,255,255,0.1); border: 1px solid var(--card-border); color: var(--text-main);" onclick="sendFeedback()"><i class="fa-solid fa-comment-dots"></i> Написать разработчику</button>
         <button class="btn-submit btn-danger" style="margin: 4px 16px 12px; width: calc(100% - 32px);" onclick="clearAllData()">Сбросить все данные</button>
@@ -673,13 +686,13 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Категория</label>
                 <select class="form-select" id="tx-category"></select>
             </div>
-            <div class="form-group" id="tx-scope-group" style="display:none;">
+            <div class="form-group" id="tx-scope-group">
                 <label class="form-label">Видимость</label>
                 <select class="form-select" id="tx-scope">
                     <option value="family">🏠 Общая — видна семье</option>
                     <option value="personal">👤 Личная — видна только мне</option>
                 </select>
-                <div style="font-size:10px;color:var(--text-muted);margin-top:5px;">Личная операция не входит в семейный бюджет и аналитику.</div>
+                <div id="tx-scope-hint" style="font-size:10px;color:var(--text-muted);margin-top:5px;">Личная операция не входит в семейный бюджет и аналитику.</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Сумма</label>
@@ -724,13 +737,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                     <option value="₽">₽ Рубль</option>
                     <option value="$">$ Доллар</option>
                     <option value="€">€ Евро</option>
-                </select>
-            </div>
-            <div class="form-group" id="edit-tx-scope-group" style="display:none;">
-                <label class="form-label">Видимость</label>
-                <select class="form-select" id="edit-tx-scope">
-                    <option value="family">🏠 Общая — видна семье</option>
-                    <option value="personal">👤 Личная — видна только мне</option>
                 </select>
             </div>
             <button class="btn-submit" onclick="saveEditTx()">Сохранить</button>
@@ -865,12 +871,13 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Автоперевод % с каждого дохода (0 — выкл)</label>
                 <input type="number" class="form-input" id="new-goal-autopct" placeholder="10" inputmode="decimal">
             </div>
-            <div class="form-group" id="new-goal-scope-group" style="display:none;">
-                <label class="form-label">Видимость</label>
+            <div class="form-group" id="new-goal-scope-group">
+                <label class="form-label">Видимость копилки</label>
                 <select class="form-select" id="new-goal-scope">
                     <option value="personal">👤 Личная — только я</option>
                     <option value="family">🏠 Общая — семейная копилка</option>
                 </select>
+                <div id="new-goal-scope-hint" style="font-size:10px;color:var(--text-muted);margin-top:5px;"></div>
             </div>
             <button class="btn-submit" onclick="saveNewGoal()">Создать цель</button>
         </div>
@@ -1049,6 +1056,7 @@ let trialUsed = localStorage.getItem('sage_trial_used') === 'true';
 let dailyReminderEnabled = localStorage.getItem('sage_daily_reminder_enabled') !== 'false';
 let dailyReminderHour = Number(localStorage.getItem('sage_daily_reminder_hour')) || 20;
 let dailyReminderTimezone = localStorage.getItem('sage_daily_reminder_timezone') || (Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Moscow');
+let nextIncomeDate = localStorage.getItem('sage_next_income_date') || '';
 if (proUntil && Date.now() > proUntil) { localStorage.removeItem('sage_pro_until'); proUntil = 0; }
 // trialUntil сохраняем после окончания, чтобы показывать дату окончания; покупка PRO остаётся доступной.
 let currentCurrency = localStorage.getItem('sage_currency') || '₽';
@@ -1474,6 +1482,25 @@ async function saveDailyReminder() {
     try { await fetch(API_URL+'/notifications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:platform.initData,action:'save',enabled:dailyReminderEnabled,hour:dailyReminderHour,timezone:dailyReminderTimezone})}); } catch(e) {}
 }
 function toggleDailyReminder() { dailyReminderEnabled=!dailyReminderEnabled; localStorage.setItem('sage_daily_reminder_enabled',String(dailyReminderEnabled)); applyDailyReminderUI(); saveDailyReminder(); }
+function applyNextIncomeDateUI() {
+    const el = document.getElementById('next-income-date');
+    if (el) el.value = nextIncomeDate || '';
+}
+function saveNextIncomeDate() {
+    const el = document.getElementById('next-income-date');
+    nextIncomeDate = String(el?.value || '');
+    if (nextIncomeDate) localStorage.setItem('sage_next_income_date', nextIncomeDate);
+    else localStorage.removeItem('sage_next_income_date');
+    try { cloudSave(); } catch (e) {}
+    renderUI();
+}
+function clearNextIncomeDate() {
+    nextIncomeDate = '';
+    localStorage.removeItem('sage_next_income_date');
+    const el = document.getElementById('next-income-date'); if (el) el.value = '';
+    try { cloudSave(); } catch (e) {}
+    renderUI();
+}
 
 function saveRates() {
     rates.USD = Number(document.getElementById('rate-usd').value) || rates.USD;
@@ -1922,9 +1949,15 @@ function closeAddCatModal() { document.getElementById('cat-modal').style.display
 function openAddGoalModal() {
     triggerHaptic();
     const g = document.getElementById('new-goal-scope-group');
-    if (g) g.style.display = familyIsFamily ? 'block' : 'none';
+    if (g) g.style.display = 'block';
     const s = document.getElementById('new-goal-scope');
-    if (s) s.value = 'personal';
+    const hint = document.getElementById('new-goal-scope-hint');
+    if (s) {
+        s.value = 'personal';
+        const familyOpt = s.querySelector('option[value="family"]');
+        if (familyOpt) familyOpt.disabled = !familyIsFamily;
+    }
+    if (hint) hint.textContent = familyIsFamily ? 'Общая копилка видна семье и доступна всем участникам.' : 'Сейчас доступна только личная копилка. Чтобы создать общую, сначала подключите семейный режим.';
     document.getElementById('goal-modal').style.display = 'flex';
 }
 function closeAddGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
@@ -2049,7 +2082,19 @@ function onTxTypeChange() {
         }
     }
     const scopeGroup = document.getElementById('tx-scope-group');
-    if (scopeGroup) scopeGroup.style.display = (familyIsFamily && type !== 'savings') ? 'block' : 'none';
+    const scopeSelect = document.getElementById('tx-scope');
+    const scopeHint = document.getElementById('tx-scope-hint');
+    if (scopeGroup) scopeGroup.style.display = 'block';
+    if (scopeSelect) {
+        const familyOpt = scopeSelect.querySelector('option[value="family"]');
+        if (familyOpt) familyOpt.disabled = !familyIsFamily;
+        if (!familyIsFamily) scopeSelect.value = 'personal';
+        if (type === 'savings') {
+            const selectedGoal = goals.find(g => g.id === document.getElementById('tx-goal-target')?.value);
+            if (selectedGoal) scopeSelect.value = selectedGoal.scope === 'family' && familyIsFamily ? 'family' : 'personal';
+        }
+    }
+    if (scopeHint) scopeHint.textContent = familyIsFamily ? '🏠 Общая входит в семейный бюджет. 👤 Личная видна только вам и не влияет на семейные итоги.' : 'Личная операция сохраняется только в вашем личном пространстве.';
 }
 function populateGoalDropdown() {
     const select = document.getElementById('tx-goal-target');
@@ -2127,7 +2172,7 @@ function renderTransactionsList(filteredTxs) {
                 <div class="tx-icon" style="${tx.type === 'expense' ? `color:${(catTags[tx.category] || 'want') === 'need' ? 'var(--accent-sage)' : 'var(--gold)'};` : ''}"><span class="category-emoji">${catEmoji(tx.category, tx.type)}</span></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}${familyIsFamily && tx.scope === 'personal' ? ' · 🔒 личная' : ''}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}</div>
                 </div>
             </div>
             <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : 'var(--text-main)')};">
@@ -2365,10 +2410,6 @@ function openEditTx(id) {
     }
     document.getElementById('edit-tx-amount').value = tx.amount;
     document.getElementById('edit-tx-currency').value = tx.currency || '₽';
-    const editScopeGroup = document.getElementById('edit-tx-scope-group');
-    const editScope = document.getElementById('edit-tx-scope');
-    if (editScopeGroup) editScopeGroup.style.display = (familyIsFamily && tx.type !== 'savings') ? 'block' : 'none';
-    if (editScope) editScope.value = tx.scope === 'personal' ? 'personal' : 'family';
     document.getElementById('tx-edit-modal').style.display = 'flex';
 }
 function closeEditTx() {
@@ -2390,7 +2431,6 @@ function saveEditTx() {
     tx.currency = currency;
     tx.amountBase = convertToBase(amount, currency);
     if (tx.type !== 'savings') tx.category = document.getElementById('edit-tx-category').value;
-    if (familyIsFamily && tx.type !== 'savings') tx.scope = document.getElementById('edit-tx-scope')?.value === 'personal' ? 'personal' : 'family';
     saveAll(); closeEditTx(); renderUI();
 }
 
@@ -2617,7 +2657,7 @@ function renderGoalsList() {
         const card = document.createElement('div');
         card.style.cssText = 'margin-bottom:18px;padding-bottom:2px;';
         card.innerHTML = `
-            <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 24px;align-items:center;column-gap:8px;margin-bottom:7px;">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 24px;align-items:center;column-gap:8px;margin-bottom:6px;">
                 <div style="min-width:0;">
                     <div style="font-weight:bold;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(g.name)}</div>
                     <div class="hideable" style="font-size:12px;color:var(--text-muted);margin-top:2px;">${fmt(current)} / ${fmt(target)} ${currentCurrency} · ${scope}</div>
@@ -2749,7 +2789,7 @@ document.getElementById('save-tx-btn').onclick = () => {
                 amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now(),
                 authorId: platform.user?.id ? Number(platform.user.id) : undefined,
                 authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '',
-                scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
+                scope: (goal.scope === 'family' && familyIsFamily) ? 'family' : 'personal'
             });
         }
     } else {
@@ -2759,7 +2799,7 @@ document.getElementById('save-tx-btn').onclick = () => {
             trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(),
             authorId: platform.user?.id ? Number(platform.user.id) : undefined,
             authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '',
-            scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
+            scope: document.getElementById('tx-scope')?.value === 'personal' ? 'personal' : 'family'
         });
     }
     if (type === 'income') applyAutoSavings(base);
@@ -2791,18 +2831,16 @@ let lastLocalMutationAt = 0;
 
 function getStatePayload() {
     return {
-        transactions, goals,
-        personalTransactions: (transactions || []).filter(t => t.scope === 'personal'),
-        personalGoals: (goals || []).filter(g => g.scope === 'personal'),
-        deposits, debts, recurring,
+        transactions, goals, deposits, debts, recurring,
         expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
-        catTags
+        catTags,
+        personalSettings: { nextIncomeDate }
     };
 }
 function applyState(s) {
     if (!s) return;
     if (s.transactions)        { transactions = s.transactions; localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
-    if (s.goals)               { goals = s.goals.map(g => ({ ...g, scope: g.scope === 'family' ? 'family' : 'personal' })); localStorage.setItem('sage_goals', JSON.stringify(goals)); }
+    if (s.goals)               { goals = s.goals; localStorage.setItem('sage_goals', JSON.stringify(goals)); }
     if (s.deposits)            { deposits = s.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
     if (s.debts)               { debts = s.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
     if (s.recurring)           { recurring = s.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
@@ -2824,6 +2862,12 @@ function applyState(s) {
                                  document.getElementById('rate-eur').value = rates.EUR; }
     if (s.currency)            { currentCurrency = s.currency; localStorage.setItem('sage_currency', currentCurrency);
                                  document.getElementById('currency-select').value = currentCurrency; }
+    if (s.personalSettings && typeof s.personalSettings === 'object') {
+        nextIncomeDate = String(s.personalSettings.nextIncomeDate || '');
+        if (nextIncomeDate) localStorage.setItem('sage_next_income_date', nextIncomeDate);
+        else localStorage.removeItem('sage_next_income_date');
+        const ni = document.getElementById('next-income-date'); if (ni) ni.value = nextIncomeDate;
+    }
     if (Object.prototype.hasOwnProperty.call(s, 'proUntil') || Object.prototype.hasOwnProperty.call(s, 'isPro')) {
         proUntil = Number(s.proUntil) || 0;
         trialUntil = Number(s.trialUntil) || 0;
@@ -3589,7 +3633,7 @@ function startCloudRefreshLoop() {
     if (!platform.inTelegram) return;
     cloudRefreshTimer = setInterval(() => {
         if (document.visibilityState === 'visible') refreshFromCloud();
-    }, 5000);
+    }, 12000);
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFromCloud(); });
 window.addEventListener('focus', refreshFromCloud);
@@ -3604,6 +3648,8 @@ startCloudRefreshLoop();
     renderUI();
     renderFamilyStatus();
     applyDailyReminderUI();
+    applyNextIncomeDateUI();
+    document.getElementById('next-income-date')?.addEventListener('change', saveNextIncomeDate);
     const cloudPromise = cloudLoad().catch(e => console.error('cloudLoad failed', e));
     const ratesPromise = fetchCbRates().catch(() => {});
     const partnersPromise = fetchPartners().catch(() => {});
