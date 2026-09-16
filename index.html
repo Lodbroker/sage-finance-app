@@ -513,6 +513,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <div><div style="font-size:13px;font-weight:600;">Что сегодня по тратам и доходам?</div><div style="font-size:11px;color:var(--text-muted);">Если за день нет записей, бот напомнит вечером.</div></div>
                 <div class="toggle" id="daily-reminder-toggle" onclick="toggleDailyReminder()"></div>
             </div>
+            <div class="toggle-row" style="margin-top:10px;"><div><div style="font-size:13px;font-weight:600;">Следующий доход</div><div style="font-size:11px;color:var(--text-muted);">Дата используется для дневного лимита. Без неё приложение ничего не угадывает.</div></div><input type="date" class="form-input" id="next-income-date" style="width:145px;padding:8px;" onchange="saveNextIncomeDate()"></div>
             <div id="daily-reminder-options" style="margin-top:10px;">
                 <label class="form-label">Время напоминания</label>
                 <select class="form-select" id="daily-reminder-hour" onchange="saveDailyReminder()">
@@ -628,6 +629,10 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Категория</label>
                 <select class="form-select" id="tx-category"></select>
             </div>
+            <div class="form-group" id="tx-scope-group">
+                <label class="form-label">Видимость операции</label>
+                <select class="form-select" id="tx-scope"><option value="family">🏠 Общая — видна семье</option><option value="personal">👤 Личная — только мне</option></select>
+            </div>
             <div class="form-group">
                 <label class="form-label">Сумма</label>
                 <input type="number" class="form-input" id="tx-amount" placeholder="0" inputmode="decimal">
@@ -660,6 +665,10 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div class="form-group">
                 <label class="form-label">Категория</label>
                 <select class="form-select" id="edit-tx-category"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Видимость операции</label>
+                <select class="form-select" id="edit-tx-scope"><option value="family">🏠 Общая — видна семье</option><option value="personal">👤 Личная — только мне</option></select>
             </div>
             <div class="form-group">
                 <label class="form-label">Сумма</label>
@@ -805,6 +814,7 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Автоперевод % с каждого дохода (0 — выкл)</label>
                 <input type="number" class="form-input" id="new-goal-autopct" placeholder="10" inputmode="decimal">
             </div>
+            <div class="form-group"><label class="form-label">Видимость цели</label><select class="form-select" id="new-goal-scope"><option value="personal">👤 Личная</option><option value="family">🏠 Семейная — участники видят и пополняют</option></select></div>
             <button class="btn-submit" onclick="saveNewGoal()">Создать цель</button>
         </div>
     </div>
@@ -988,6 +998,7 @@ let pinCode    = localStorage.getItem('sage_pin') || null;
 let rates      = JSON.parse(localStorage.getItem('sage_rates')) || { 'USD': 91.5, 'EUR': 100.2 };
 let tripMode   = localStorage.getItem('sage_trip') === '1';
 let weekLimit  = Number(localStorage.getItem('sage_weeklimit')) || 0;
+let nextIncomeDate = localStorage.getItem('sage_next_income_date') || '';
 let txSearchQuery = '';
 let txAuthorFilter = 'all';
 let txVisibleCount = 50;
@@ -1042,8 +1053,8 @@ function renderFamilyOverview() {
     const box = document.getElementById('family-overview-members');
     if (!card || !summary || !box) return;
     if (!familyIsFamily) { card.style.display='none'; return; }
-    const monthTxs = transactions.filter(t => t.mk === selectedMonth);
-    const expenses = monthTxs.filter(t => t.type === 'expense');
+    const monthTxs = transactions.filter(t => t.mk === selectedMonth && (!familyIsFamily || t.scope !== 'personal'));
+    const expenses = monthTxs.filter(t => t.type === 'expense' && t.scope !== 'personal');
     const total = expenses.reduce((s,t)=>s + Number(t.amountBase ?? t.amount ?? 0), 0);
     const by = new Map();
     expenses.forEach(t => {
@@ -1052,7 +1063,7 @@ function renderFamilyOverview() {
         const row = by.get(id) || {name, amount:0, count:0};
         row.amount += Number(t.amountBase ?? t.amount ?? 0); row.count++; by.set(id,row);
     });
-    summary.innerText = `${monthNameOf(selectedMonth)} ${selectedMonth.slice(0,4)} · расходов ${fmt(total)} ${currentCurrency} · операций ${expenses.length}`;
+    summary.innerText = `На общие расходы в ${monthNameOf(selectedMonth).toLowerCase()} ушло ${fmt(total)} ${currentCurrency}`;
     box.innerHTML = Array.from(by.values()).sort((a,b)=>b.amount-a.amount).map(r => `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--card-border);font-size:11px;"><span>👤 ${esc(r.name)} · ${r.count} ${plural(r.count,'операция','операции','операций')}</span><b>${fmt(r.amount)} ${currentCurrency}</b></div>`).join('') || '<div style="font-size:11px;color:var(--text-muted);">Расходов в этом месяце пока нет.</div>';
     card.style.display='block';
 }
@@ -1389,6 +1400,7 @@ function applyDailyReminderUI() {
     const t=document.getElementById('daily-reminder-toggle'), o=document.getElementById('daily-reminder-options'), s=document.getElementById('daily-reminder-hour');
     if(t) t.classList.toggle('on',dailyReminderEnabled); if(o) o.style.display=dailyReminderEnabled?'block':'none'; if(s) s.value=String(dailyReminderHour);
 }
+function saveNextIncomeDate(){ nextIncomeDate=document.getElementById('next-income-date')?.value||''; if(nextIncomeDate)localStorage.setItem('sage_next_income_date',nextIncomeDate);else localStorage.removeItem('sage_next_income_date'); renderUI(); }
 async function saveDailyReminder() {
     dailyReminderHour=Number(document.getElementById('daily-reminder-hour')?.value)||20;
     dailyReminderTimezone=Intl.DateTimeFormat().resolvedOptions().timeZone || dailyReminderTimezone;
@@ -1903,8 +1915,10 @@ function saveNewGoal() {
     const name = document.getElementById('new-goal-name').value.trim();
     const target = Number(document.getElementById('new-goal-target').value);
     if (!name || !target) return uiAlert("Заполните название и сумму цели");
-    if (!isPro && goals.length >= 2) { openProModal(`🎯 Бесплатная версия: до 2 копилок, у вас уже ${goals.length}. В PRO копилок без лимита.`); return; }
-    goals.push({ id: Date.now(), name, target, current: 0 });
+    const scope = familyIsFamily && document.getElementById('new-goal-scope')?.value === 'family' ? 'family' : 'personal';
+    if (scope === 'family' && !isPro) { openProModal('🏠 Семейные цели доступны в PRO.'); return; }
+    if (!isPro && goals.filter(g => g.scope !== 'family').length >= 2) { openProModal(`🎯 Бесплатная версия: до 2 копилок, у вас уже ${goals.length}. В PRO копилок без лимита.`); return; }
+    goals.push({ id: Date.now(), name, target, current: 0, scope });
     saveAll();
     document.getElementById('new-goal-name').value = '';
     document.getElementById('new-goal-target').value = '';
@@ -1996,7 +2010,10 @@ function renderDashboardPlanner(income, expense, savings) {
     const currentBalance=income-expense-savings;
     const free=isCurrent ? Math.max(0,currentBalance-committed) : currentBalance;
     const f=document.getElementById('free-to-spend'); if(f) f.innerText=fmt(free)+' '+currentCurrency;
-    const hint=document.getElementById('free-to-spend-hint'); if(hint) hint.innerText=isCurrent ? (daysLeft>1?`≈ ${fmt(free/daysLeft)} ${currentCurrency} в день до конца месяца`:'Последний день месяца') : 'Свободный остаток выбранного месяца';
+    const hint=document.getElementById('free-to-spend-hint');
+    let dailyHint='';
+    if(isCurrent && nextIncomeDate){ const nd=new Date(nextIncomeDate+'T00:00:00'); const diff=Math.ceil((nd-new Date(nowD.getFullYear(),nowD.getMonth(),nowD.getDate()))/86400000); if(diff>0) dailyHint=`≈ ${fmt(free/diff)} ${currentCurrency} в день до ${nd.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})}`; }
+    if(hint) hint.innerText=isCurrent ? (dailyHint || (daysLeft>1?`≈ ${fmt(free/daysLeft)} ${currentCurrency} в день до конца месяца`:'Последний день месяца')) : 'Свободный остаток выбранного месяца';
     const box=document.getElementById('dashboard-upcoming-payments'); if(!box)return; box.innerHTML='';
     if(!recurring.length){box.innerHTML='<div style="font-size:11px;color:var(--text-muted);">Добавьте постоянные платежи — аренду, подписки, кредит или ЖКХ.</div>';return;}
     if(!upcoming.length){box.innerHTML='<div style="font-size:11px;color:var(--text-muted);">Ближайших платежей в выбранном месяце нет.</div>';return;}
@@ -2010,14 +2027,6 @@ function renderTransactionsList(filteredTxs) {
     txListEl.innerHTML = '';
 
     const isSearch = !!txSearchQuery;
-    if (familyIsFamily && familyMembers.length) {
-        const host=document.getElementById('tx-list')?.parentElement;
-        if(host && !document.getElementById('family-tx-filter')) {
-            const sel=document.createElement('select'); sel.id='family-tx-filter'; sel.style.cssText='width:100%;margin:4px 0 8px;padding:8px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text-main);font-size:11px;';
-            sel.innerHTML='<option value="">Все участники</option>'+familyMembers.map(m=>`<option value="${m.tg_id}">${esc(([m.first_name,m.last_name].filter(Boolean).join(' ')||('@'+(m.username||m.tg_id))))}</option>`).join('');
-            host.insertBefore(sel, document.getElementById('tx-list')); sel.onchange=()=>{ const v=sel.value; renderTransactionsList(v?transactions.filter(t=>String(t.authorId)===String(v)):transactions.filter(t=>t.mk===selectedMonth)); };
-        }
-    }
     const total = filteredTxs.length;
     const shown = filteredTxs.slice(0, txVisibleCount);
     let previousMonth = null;
@@ -2039,7 +2048,7 @@ function renderTransactionsList(filteredTxs) {
                 <div class="tx-icon" style="${tx.type === 'expense' ? `color:${(catTags[tx.category] || 'want') === 'need' ? 'var(--accent-sage)' : 'var(--gold)'};` : ''}"><span class="category-emoji">${catEmoji(tx.category, tx.type)}</span></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${familyIsFamily && transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${familyIsFamily && transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}${familyIsFamily && tx.scope === 'personal' ? ' · 🔒 личная' : ''}</div>
                 </div>
             </div>
             <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : 'var(--text-main)')};">
@@ -2140,7 +2149,7 @@ function renderUI() {
 
     // Без поиска показываем операции выбранного месяца. При поиске ищем по всей истории,
     // включая предыдущие месяцы. Это позволяет найти, например, старую покупку по категории.
-    let visibleTxs = monthTxs;
+    let visibleTxs = transactions.filter(t => t.mk === selectedMonth);
     if (txSearchQuery) {
         const q = txSearchQuery;
         visibleTxs = transactions.filter(t => {
@@ -2171,7 +2180,7 @@ function renderUI() {
     const pKey = prevMonthKey(selectedMonth);
     let pInc = 0, pExp = 0;
     transactions.forEach(t => {
-        if (t.mk !== pKey) return;
+        if (t.mk !== pKey || (familyIsFamily && t.scope === 'personal')) return;
         const b = t.amountBase !== undefined ? t.amountBase : t.amount;
         if (t.type === 'income') pInc += b;
         if (t.type === 'expense') pExp += b;
@@ -2188,7 +2197,10 @@ function renderUI() {
     trEl('trend-expense', expense, pExp, true);
     const avgDaily = expense / elapsed;
     document.getElementById('avg-daily').innerText = `${fmt(avgDaily)} ${currentCurrency}`;
-    document.getElementById('forecast-expense').innerText = `${fmt(avgDaily * 30)} ${currentCurrency}`;
+    const daysInMonthForecast = new Date(Number(selectedMonth.slice(0,4)), Number(selectedMonth.slice(5,7)), 0).getDate();
+    const remainingDaysForecast = selectedMonth === curKey ? Math.max(0, daysInMonthForecast - nowD.getDate()) : 0;
+    const projectedExpenses = selectedMonth === curKey ? expense + avgDaily * remainingDaysForecast : expense;
+    document.getElementById('forecast-expense').innerText = `${fmt(projectedExpenses)} ${currentCurrency}`;
     renderDashboardPlanner(income, expense, savings);
 
     renderBudgetPlanner(catTotals);
@@ -2275,6 +2287,7 @@ function openEditTx(id) {
         catSel.disabled = true;
     }
     document.getElementById('edit-tx-amount').value = tx.amount;
+    const scopeEl=document.getElementById('edit-tx-scope'); if(scopeEl){scopeEl.value=tx.scope==='personal'?'personal':'family'; scopeEl.style.display=familyIsFamily?'block':'none';}
     document.getElementById('edit-tx-currency').value = tx.currency || '₽';
     document.getElementById('tx-edit-modal').style.display = 'flex';
 }
@@ -2297,6 +2310,7 @@ function saveEditTx() {
     tx.currency = currency;
     tx.amountBase = convertToBase(amount, currency);
     if (tx.type !== 'savings') tx.category = document.getElementById('edit-tx-category').value;
+    if (familyIsFamily && familyRole === 'owner') tx.scope=document.getElementById('edit-tx-scope')?.value==='personal'?'personal':'family';
     saveAll(); closeEditTx(); renderUI();
 }
 
@@ -2521,7 +2535,7 @@ function renderGoalsList() {
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <div>
-                    <div style="font-weight:bold; font-size:14px;">${esc(g.name)}</div>
+                    <div style="font-weight:bold; font-size:14px;">${esc(g.name)} <span class="tag" style="font-size:8px;">${g.scope==='family'?'🏠 общая':'👤 личная'}</span></div>
                     <div class="hideable" style="font-size:12px; color:var(--text-muted);">${fmt(g.current)} / ${fmt(g.target)} ${currentCurrency}</div>
                 </div>
                 <span class="tag ${pct >= 100 ? 'green' : 'gold'}">${pct}%</span> <i class="fa-solid fa-trash" data-goal-del="${g.id}" title="Удалить цель" style="font-size:11px;color:var(--danger);cursor:pointer;"></i>
@@ -2604,8 +2618,8 @@ function renderYearlyChart() {
     const ctx = document.getElementById('yearlyChart').getContext('2d');
     if (yearlyChartInstance) yearlyChartInstance.destroy();
     const selY = selectedMonth.slice(0, 4); // год выбранного в селекторе месяца
-    const incByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'income').reduce((s, t) => s + (t.amountBase || t.amount), 0));
-    const expByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'expense').reduce((s, t) => s + (t.amountBase || t.amount), 0));
+    const incByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'income' && (!familyIsFamily || t.scope !== 'personal')).reduce((s, t) => s + (t.amountBase || t.amount), 0));
+    const expByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'expense' && (!familyIsFamily || t.scope !== 'personal')).reduce((s, t) => s + (t.amountBase || t.amount), 0));
     yearlyChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -2636,6 +2650,7 @@ document.getElementById('save-tx-btn').onclick = () => {
     const type = document.getElementById('tx-type').value;
     const amount = Number(document.getElementById('tx-amount').value);
     const currency = document.getElementById('tx-currency').value;
+    const scope = familyIsFamily && document.getElementById('tx-scope')?.value === 'personal' ? 'personal' : 'family';
     if (!amount || amount <= 0) return uiAlert("Введите корректную сумму");
     const base = convertToBase(amount, currency);
 
@@ -2647,6 +2662,7 @@ document.getElementById('save-tx-btn').onclick = () => {
             transactions.unshift({
                 id: Date.now(), type: 'savings', category: `Копилка: ${goal.name}`,
                 amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now(),
+                scope,
                 authorId: platform.user?.id ? Number(platform.user.id) : undefined,
                 authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : ''
             });
@@ -2655,7 +2671,7 @@ document.getElementById('save-tx-btn').onclick = () => {
         const category = document.getElementById('tx-category').value;
         transactions.unshift({
             id: Date.now(), type, category, amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня',
-            trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(),
+            trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(), scope,
             authorId: platform.user?.id ? Number(platform.user.id) : undefined,
             authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : ''
         });
@@ -2695,8 +2711,8 @@ function getStatePayload() {
 }
 function applyState(s) {
     if (!s) return;
-    if (s.transactions)        { transactions = s.transactions; localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
-    if (s.goals)               { goals = s.goals; localStorage.setItem('sage_goals', JSON.stringify(goals)); }
+    if (s.transactions)        { transactions = s.transactions.map(t=>({...t,scope:t.scope==='personal'?'personal':'family'})); localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
+    if (s.goals)               { goals = s.goals.map(g=>({...g,scope:g.scope==='personal'?'personal':'family'})); localStorage.setItem('sage_goals', JSON.stringify(goals)); }
     if (s.deposits)            { deposits = s.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
     if (s.debts)               { debts = s.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
     if (s.recurring)           { recurring = s.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
