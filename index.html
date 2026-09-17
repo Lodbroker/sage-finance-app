@@ -133,15 +133,26 @@
         .debt-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; }
         .debt-actions { display:flex; align-items:center; gap:6px; justify-content:flex-end; flex-wrap:wrap; }
         .deposit-top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:start; }
+        @media (max-width: 480px) {
+            #tx-toolbar { display:grid; grid-template-columns:1fr 1fr; gap:6px; width:100%; flex-basis:100%; justify-content:stretch; }
+            #tx-toolbar .form-select, #tx-toolbar #tx-search { width:100% !important; min-width:0; max-width:none; }
+            #tx-search { grid-column:1 / -1; }
+            #tx-author-filter:empty { display:none !important; }
+            .tx-item { gap:8px; }
+            .tx-item > div:first-child { min-width:0; }
+            .tx-item > div:first-child > div:last-child { font-size:10px; }
+            .tx-right { min-width:0; }
+            .deposit-top { grid-template-columns:minmax(0,1fr) auto; }
+        }
+
         @media (max-width: 390px) {
             .header { padding: 12px 10px; }
             .user-profile { min-width:0; flex:1; }
             .user-profile > div:last-child { min-width:0; }
             #month-selector { min-width: 118px; width:118px !important; padding-left:7px !important; padding-right:7px !important; }
             .icon-btn { width:32px; height:32px; }
-            #tx-toolbar { justify-content:flex-start; width:100%; flex-basis:100%; }
-            #tx-search { flex:1 1 130px; min-width:120px; }
-            #tx-author-filter, #tx-sort-filter, #tx-scope-filter, #tx-type-filter { width:110px !important; }
+            #tx-toolbar { width:100%; flex-basis:100%; }
+            #tx-author-filter, #tx-sort-filter, #tx-scope-filter, #tx-type-filter { width:100% !important; }
             .debt-row { grid-template-columns:1fr; }
             .debt-actions { justify-content:flex-start; }
             .deposit-top { grid-template-columns:1fr; }
@@ -198,7 +209,7 @@
         .form-group { margin-bottom: 14px; }
         .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
         .form-input, .form-select { width: 100%; padding: 12px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--card-border); color: var(--input-text); font-size: 15px; outline: none; }
-        .form-select option { background-color: var(--option-bg); color: #fff; }
+        .form-select option { background-color: var(--option-bg); color: var(--text-main); }
         .btn-submit { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--accent-sage); color: #000; font-weight: bold; font-size: 15px; cursor: pointer; }
         .btn-small { padding: 6px 12px; border-radius: 8px; border: none; background: var(--accent-sage); color: #000; font-weight: bold; font-size: 12px; cursor: pointer; white-space: nowrap; }
         .btn-danger { background: var(--danger); color: #fff; }
@@ -1736,7 +1747,7 @@ function saveNewDeposit() {
     const rate = Number(document.getElementById('new-dep-rate').value);
     const date = document.getElementById('new-dep-date').value || new Date().toISOString().slice(0, 10);
     if (!name || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(rate) || rate < 0) return uiAlert('Заполните название, сумму и ставку корректно');
-    if (!isPro && deposits.length >= 2) { openProModal(`🏛 Бесплатная версия: до 2 вкладов, у вас уже ${deposits.length}. PRO открывает безлимит.`); return; }
+    if (!isPro && deposits.filter(d => !d.closedAt).length >= 2) { openProModal(`🏛 Бесплатная версия: до 2 вкладов, у вас уже ${deposits.length}. PRO открывает безлимит.`); return; }
     deposits.push({ id: (crypto.randomUUID ? crypto.randomUUID() : ('dep-' + Date.now() + '-' + Math.random().toString(36).slice(2,8))), name, amount, rate, date, createdAt: Date.now(), updatedAt: Date.now() });
     saveAll(); closeAddDepositModal(); renderUI();
 }
@@ -1752,16 +1763,22 @@ function editDepositField(id, field) {
     }, 'number');
 }
 function deleteDeposit(id) {
-    uiConfirm('Закрыть вклад и удалить его из списка?', () => {
-        deposits = deposits.filter(x => x.id !== id);
-        saveAll(); renderUI();
+    uiConfirm('Закрыть вклад? После подтверждения он исчезнет из активных вкладов.', () => {
+        const d = deposits.find(x => x.id === id);
+        if (!d) return;
+        // Keep a small tombstone in the synchronized state. This prevents a stale
+        // phone/PC snapshot from resurrecting a just-closed deposit after a CAS conflict.
+        d.closedAt = Date.now();
+        d.updatedAt = Date.now();
+        saveAll();
+        renderUI();
     });
 }
 function renderDepositsList() {
     const container = document.getElementById('deposits-list');
     container.innerHTML = '';
     let total = 0, totalInterest = 0;
-    deposits.forEach(d => {
+    deposits.filter(d => !d.closedAt).forEach(d => {
         const interest = depositInterest(d);
         total += d.amount + interest;
         totalInterest += interest;
@@ -1788,7 +1805,7 @@ function renderDepositsList() {
         card.querySelector('[data-dep-del]').addEventListener('click', () => deleteDeposit(d.id));
         container.appendChild(card);
     });
-    if (!deposits.length) container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Вкладов нет — нажмите «+ Вклад»</div>';
+    if (!deposits.some(d => !d.closedAt)) container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Вкладов нет — нажмите «+ Вклад»</div>';
     document.getElementById('deposits-total').innerText = `${fmt(total)} ${currentCurrency}`;
     document.getElementById('deposits-interest').innerText = `${fmt(totalInterest)} ${currentCurrency}`;
 }
@@ -2006,7 +2023,7 @@ function closeAddCatModal() { document.getElementById('cat-modal').style.display
 function openAddGoalModal() {
     triggerHaptic();
     const g = document.getElementById('new-goal-scope-group');
-    if (g) g.style.display = familyIsFamily ? 'block' : 'none';
+    if (g) g.style.display = 'block';
     const s = document.getElementById('new-goal-scope');
     if (s) s.value = 'personal';
     document.getElementById('goal-modal').style.display = 'flex';
@@ -2072,7 +2089,7 @@ function saveNewGoal() {
     const name = document.getElementById('new-goal-name').value.trim();
     const target = Number(document.getElementById('new-goal-target').value);
     if (!name || !target) return uiAlert("Заполните название и сумму цели");
-    const scope = familyIsFamily ? (document.getElementById('new-goal-scope')?.value || 'personal') : 'personal';
+    const scope = document.getElementById('new-goal-scope')?.value === 'family' ? 'family' : 'personal';
     const familyGoalsCount = goals.filter(g => g.scope !== 'personal').length;
     if (scope === 'family' && !isPro) { openProModal('🎯 Общие семейные копилки доступны в PRO. Личная копилка доступна без PRO.'); return; }
     if (!isPro && goals.filter(g => g.scope === 'personal' || !g.scope).length >= 2) { openProModal(`🎯 Бесплатная версия: до 2 личных копилок, у вас уже достигнут лимит. В PRO копилок без лимита.`); return; }
@@ -2133,7 +2150,7 @@ function onTxTypeChange() {
         }
     }
     const scopeGroup = document.getElementById('tx-scope-group');
-    if (scopeGroup) scopeGroup.style.display = (familyIsFamily && type !== 'savings') ? 'block' : 'none';
+    if (scopeGroup) scopeGroup.style.display = 'block';
 }
 function populateGoalDropdown() {
     const select = document.getElementById('tx-goal-target');
@@ -2301,9 +2318,12 @@ function renderUI() {
 
     // Итоги всегда считаются по выбранному месяцу, независимо от активного поиска.
     const monthTxs = transactions.filter(t => t.mk === selectedMonth);
-    const familyModeScope = familyIsFamily ? (['family','all','personal'].includes(txScopeFilter) ? txScopeFilter : 'family') : 'all';
-    if (familyIsFamily && !['family','all','personal'].includes(txScopeFilter)) txScopeFilter = 'family';
-    if (!familyIsFamily) txScopeFilter = 'all';
+    const familyModeScope = ['family','all','personal'].includes(txScopeFilter) ? txScopeFilter : 'family';
+    if (!['family','all','personal'].includes(txScopeFilter)) txScopeFilter = 'family';
+    // The scope selector is useful even for a user who has not created a family yet:
+    // `family` means shared/common operations, `personal` means private operations.
+    // In family mode the server only returns this user's personal operations, so
+    // selecting `personal` can never expose another member's private data.
     const filterScope = (arr) => arr.filter(t => familyModeScope === 'all' || (familyModeScope === 'personal' ? t.scope === 'personal' : t.scope !== 'personal'));
     const filterType = (arr) => txTypeFilter === 'all' ? arr : arr.filter(t => t.type === txTypeFilter);
     const analyticsTxs = filterType(filterScope(monthTxs));
@@ -2351,7 +2371,7 @@ function renderUI() {
     renderFamilyAuthorFilter();
     if (familyIsFamily && !['family','all','personal'].includes(txScopeFilter)) txScopeFilter = 'family';
     if (!familyIsFamily) txScopeFilter = 'all';
-    const scopeSel = document.getElementById('tx-scope-filter'); if (scopeSel) { scopeSel.value = txScopeFilter; scopeSel.style.display = familyIsFamily ? 'block' : 'none'; }
+    const scopeSel = document.getElementById('tx-scope-filter'); if (scopeSel) { scopeSel.value = txScopeFilter; scopeSel.style.display = 'block'; }
     const typeSel = document.getElementById('tx-type-filter'); if (typeSel) typeSel.value = txTypeFilter;
     const sortSel = document.getElementById('tx-sort-filter'); if (sortSel) sortSel.value = txSortOrder;
     renderFamilyOverview();
@@ -2477,7 +2497,7 @@ function openEditTx(id) {
     if (editDate) editDate.value = txOperationDate(tx);
     const editScopeGroup = document.getElementById('edit-tx-scope-group');
     const editScope = document.getElementById('edit-tx-scope');
-    if (editScopeGroup) editScopeGroup.style.display = (familyIsFamily && tx.type !== 'savings') ? 'block' : 'none';
+    if (editScopeGroup) editScopeGroup.style.display = 'block';
     if (editScope) editScope.value = tx.scope === 'personal' ? 'personal' : 'family';
     document.getElementById('tx-edit-modal').style.display = 'flex';
 }
@@ -2509,7 +2529,7 @@ function saveEditTx() {
     tx.createdAt = Number(tx.createdAt || tx.ts || editTs);
     tx.ts = editTs;
     if (tx.type !== 'savings') tx.category = document.getElementById('edit-tx-category').value;
-    if (familyIsFamily && tx.type !== 'savings') tx.scope = document.getElementById('edit-tx-scope')?.value === 'personal' ? 'personal' : 'family';
+    if (document.getElementById('edit-tx-scope')) tx.scope = document.getElementById('edit-tx-scope').value === 'personal' ? 'personal' : 'family';
     saveAll(); closeEditTx(); renderUI();
 }
 
@@ -2789,7 +2809,7 @@ function renderChart(catTotals) {
             labels: Object.keys(catTotals).length ? Object.keys(catTotals) : ['Нет данных'],
             datasets: [{ data: Object.values(catTotals).length ? Object.values(catTotals) : [1], backgroundColor: ['#52B788', '#74C69D', '#FFD166', '#EF476F', '#118AB2', '#9B5DE5', '#F15BB5', '#00BBF9', '#00F5D4', '#8AC926'], borderWidth: 0 }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
+        options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { position: 'right', labels: { color: chartMuted(), font: { size: 10 } } } }, cutout: '70%' }
     });
 
     // Chart.js сдвигает кольцо влево, когда легенда стоит справа.
@@ -2842,7 +2862,7 @@ function renderYearlyChart() {
                 { label: 'Расход', data: expByMonth, backgroundColor: '#EF476F' }
             ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: chartMuted(), font: { size: 10 } } } }, scales: { x: { ticks: { color: chartMuted(), font: { size: 9 } } }, y: { ticks: { color: chartMuted() } } } }
+        options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { labels: { color: chartMuted(), font: { size: 10 } } } }, scales: { x: { ticks: { color: chartMuted(), font: { size: 9 } } }, y: { ticks: { color: chartMuted() } } } }
     });
 }
 
@@ -2883,7 +2903,7 @@ document.getElementById('save-tx-btn').onclick = () => {
                 amount, currency, amountBase: base, month: monthNameOf(operationMk), mk: operationMk, date: operationLabel, operationDate, createdAt, ts: createdAt,
                 authorId: platform.user?.id ? Number(platform.user.id) : undefined,
                 authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '', source: 'app',
-                scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
+                scope: (document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
             });
         }
     } else {
@@ -2893,7 +2913,7 @@ document.getElementById('save-tx-btn').onclick = () => {
             trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(),
             authorId: platform.user?.id ? Number(platform.user.id) : undefined,
             authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '', source: 'app',
-            scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
+            scope: (document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
         });
     }
     if (type === 'income') applyAutoSavings(base);
