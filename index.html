@@ -127,16 +127,25 @@
         .header-actions { display:flex; gap:6px; align-items:center; min-width:0; flex-shrink:0; }
         #month-selector { min-width: 126px; max-width: 160px; }
         #tx-toolbar { display:flex; gap:6px; align-items:center; flex:1; justify-content:flex-end; min-width:0; flex-wrap:wrap; }
-        #tx-author-filter, #tx-sort-filter { flex:0 0 auto; }
+        #tx-author-filter, #tx-sort-filter, #tx-scope-filter, #tx-type-filter { flex:0 0 auto; }
+        .tx-main { min-width:0; flex:1; }
+        .tx-right { flex:0 0 auto; text-align:right; }
+        .debt-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; }
+        .debt-actions { display:flex; align-items:center; gap:6px; justify-content:flex-end; flex-wrap:wrap; }
+        .deposit-top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:start; }
         @media (max-width: 390px) {
             .header { padding: 12px 10px; }
             .user-profile { min-width:0; flex:1; }
             .user-profile > div:last-child { min-width:0; }
-            #month-selector { min-width: 112px; width:112px !important; padding-left:7px !important; padding-right:7px !important; }
+            #month-selector { min-width: 118px; width:118px !important; padding-left:7px !important; padding-right:7px !important; }
             .icon-btn { width:32px; height:32px; }
             #tx-toolbar { justify-content:flex-start; width:100%; flex-basis:100%; }
             #tx-search { flex:1 1 130px; min-width:120px; }
-            #tx-author-filter, #tx-sort-filter { width:110px !important; }
+            #tx-author-filter, #tx-sort-filter, #tx-scope-filter, #tx-type-filter { width:110px !important; }
+            .debt-row { grid-template-columns:1fr; }
+            .debt-actions { justify-content:flex-start; }
+            .deposit-top { grid-template-columns:1fr; }
+            .tx-right { text-align:left; }
         }
         @media (orientation: landscape) and (max-height: 600px) {
             body::before { content:'Поверните телефон вертикально'; position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; text-align:center; padding:30px; background:var(--bg-grad-1); color:var(--text-main); font-size:18px; font-weight:800; }
@@ -167,8 +176,11 @@
         .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); opacity: 0.55; cursor: pointer; transition: all 0.3s; }
         .dot.active { background: var(--accent-sage); opacity: 1; width: 18px; border-radius: 4px; }
 
-        .chart-container { position: relative; height: 175px; width: 100%; }
-        .tx-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .chart-container { position: relative; height: 210px; width: 100%; }
+        @media (max-width: 480px) { .chart-container { height: 220px; } }
+        .tx-item { display: flex; justify-content: space-between; align-items: center; gap:12px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .tx-item > div:first-child { min-width:0; flex:1; }
+        .tx-item > div:first-child > div:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .tx-item:last-child { border-bottom: none; }
         #tx-list { margin-bottom: 60px; }
         .tx-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--soft-bg); display: flex; align-items: center; justify-content: center; color: var(--accent-sage); flex-shrink: 0; }
@@ -378,10 +390,21 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; gap:8px; flex-wrap:wrap;">
                 <div style="font-size: 14px; font-weight: bold;">Операции за месяц</div>
                 <div id="tx-toolbar">
+                    <select class="form-select" id="tx-scope-filter" style="width:122px; padding:6px 8px; font-size:11px;" onchange="setTxScopeFilter(this.value)">
+                        <option value="family">🏠 Семейные целиком</option>
+                        <option value="all">Все мои операции</option>
+                        <option value="personal">👤 Только личные</option>
+                    </select>
+                    <select class="form-select" id="tx-type-filter" style="width:116px; padding:6px 8px; font-size:11px;" onchange="setTxTypeFilter(this.value)">
+                        <option value="all">Все операции</option>
+                        <option value="expense">Только списания</option>
+                        <option value="income">Только пополнения</option>
+                        <option value="savings">Только накопления</option>
+                    </select>
                     <select class="form-select" id="tx-author-filter" style="width:112px; padding:6px 8px; font-size:11px; display:none;" onchange="setTxAuthorFilter(this.value)"></select>
                     <select class="form-select" id="tx-sort-filter" style="width:112px; padding:6px 8px; font-size:11px;" onchange="setTxSort(this.value)">
-                        <option value="newest">Сначала новые</option>
-                        <option value="oldest">Сначала старые</option>
+                        <option value="newest">По дате: новые</option>
+                        <option value="oldest">По дате: старые</option>
                         <option value="amount_desc">Сумма ↓</option>
                         <option value="amount_asc">Сумма ↑</option>
                     </select>
@@ -455,6 +478,11 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Простые проценты: вклад × ставка × дни / 365. Редактируйте сумму/ставку после создания.</div>
                 <div id="deposits-list"></div>
             </div>
+            <div class="glass-card" id="deposit-partner-card" style="display:none;">
+                <div style="font-size:15px;font-weight:bold;margin-bottom:6px;">Предложения банков-партнёров</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Рекламные предложения отображаются после ваших вкладов.</div>
+                <div id="partner-banks-container"></div>
+            </div>
         </div>
 
         <div id="subtab-debts" style="display:none;">
@@ -496,11 +524,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <button class="btn-submit" style="background: transparent; border: 1px solid var(--card-border); color: var(--text-main);" onclick="downloadBackup()"><i class="fa-solid fa-file-arrow-down"></i> Полный бэкап (JSON)</button>
         </div>
 
-        <div class="glass-card">
-            <div style="font-size: 15px; font-weight: bold; margin-bottom: 6px;">Предложения банков-партнеров</div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Оформляйте продукты и получайте бонусные рубли в копилки:</div>
-            <div id="partner-banks-container"></div>
-        </div>
     </div>
 
     <!-- PAGE 6: SETTINGS -->
@@ -559,6 +582,11 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <div class="toggle" id="daily-reminder-toggle" onclick="toggleDailyReminder()"></div>
             </div>
             <div id="daily-reminder-options" style="margin-top:10px;">
+                <div style="margin-bottom:12px;padding:10px 12px;border:1px solid var(--card-border);border-radius:12px;background:var(--soft-bg);">
+                    <label class="form-label" style="margin-bottom:5px;">Следующий доход</label>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:7px;">Дата следующей зарплаты/дохода используется для расчёта дневного лимита.</div>
+                    <input type="date" class="form-input" id="next-income-date" onchange="saveNextIncomeDate()">
+                </div>
                 <label class="form-label">Время напоминания</label>
                 <select class="form-select" id="daily-reminder-hour" onchange="saveDailyReminder()">
                     <option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option>
@@ -692,6 +720,11 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 </div>
             </div>
             <div class="form-group">
+                <label class="form-label">Дата проведения операции <span style="color:var(--text-muted);">необязательно</span></label>
+                <input type="date" class="form-input" id="tx-operation-date">
+                <div style="font-size:10px;color:var(--text-muted);margin-top:5px;">Если не указать дату, будет использована дата добавления.</div>
+            </div>
+            <div class="form-group">
                 <label class="form-label">Валюта операции (конвертация по курсу из настроек)</label>
                 <select class="form-select" id="tx-currency">
                     <option value="₽" selected>₽ Рубль</option>
@@ -717,6 +750,11 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <div class="form-group">
                 <label class="form-label">Сумма</label>
                 <input type="number" class="form-input" id="edit-tx-amount" inputmode="decimal">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Дата проведения операции</label>
+                <input type="date" class="form-input" id="edit-tx-operation-date">
+                <div style="font-size:10px;color:var(--text-muted);margin-top:5px;">Меняет месяц, к которому относится операция.</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Валюта</label>
@@ -1060,6 +1098,8 @@ let weekLimit  = Number(localStorage.getItem('sage_weeklimit')) || 0;
 let txSearchQuery = '';
 let txAuthorFilter = 'all';
 let txSortOrder = localStorage.getItem('sage_tx_sort') || 'newest';
+let txScopeFilter = localStorage.getItem('sage_tx_scope_filter') || 'family';
+let txTypeFilter = localStorage.getItem('sage_tx_type_filter') || 'all';
 let txVisibleCount = 50;
 let budgetPlans = JSON.parse(localStorage.getItem('sage_budget_plans')) || {};
 let editingBudgetCategory = '';
@@ -1074,6 +1114,38 @@ function setTxSearch(value) {
     renderUI();
 }
 
+function setTxScopeFilter(value) {
+    const allowed = ['family','all','personal'];
+    txScopeFilter = allowed.includes(String(value)) ? String(value) : (familyIsFamily ? 'family' : 'all');
+    localStorage.setItem('sage_tx_scope_filter', txScopeFilter);
+    txVisibleCount = 50;
+    renderUI();
+}
+function setTxTypeFilter(value) {
+    const allowed = ['all','expense','income','savings'];
+    txTypeFilter = allowed.includes(String(value)) ? String(value) : 'all';
+    localStorage.setItem('sage_tx_type_filter', txTypeFilter);
+    txVisibleCount = 50;
+    renderUI();
+}
+function txOperationDate(tx) {
+    const raw = String(tx && (tx.operationDate || tx.operation_date || '')).slice(0,10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const ts = Number(tx && tx.ts || 0);
+    if (ts > 0) { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+    return '';
+}
+function formatOperationDate(tx) {
+    const key = txOperationDate(tx);
+    if (!key) return String(tx && tx.date || '');
+    const [y,m,d] = key.split('-').map(Number);
+    return `${String(d).padStart(2,'0')}.${String(m).padStart(2,'0')}.${y}`;
+}
+function setOperationDateFields(tx) {
+    const key = txOperationDate(tx);
+    const a = document.getElementById('tx-operation-date'); if (a) a.value = key || '';
+    const b = document.getElementById('edit-tx-operation-date'); if (b) b.value = key || '';
+}
 function setTxAuthorFilter(value) {
     txAuthorFilter = String(value || 'all');
     txVisibleCount = 50;
@@ -1158,10 +1230,7 @@ let selectedMonth = monthKeyOf(new Date().getFullYear(), new Date().getMonth());
 const allMonths = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const MONTH_NUM = { 'Январь':0,'Февраль':1,'Март':2,'Апрель':3,'Май':4,'Июнь':5,'Июль':6,'Август':7,'Сентябрь':8,'Октябрь':9,'Ноябрь':10,'Декабрь':11 };
 
-let partnerBanks = [
-    { id: 1, name: 'Т-Банк (Black)', desc: 'Кэшбэк до 30% + 1000 ₽ бонуса', url: 'https://tbank.ru' },
-    { id: 2, name: 'Альфа-Карта', desc: 'Бесплатное обслуживание навсегда', url: 'https://alfabank.ru' }
-];
+let partnerBanks = [];
 
 let expenseCategories = JSON.parse(localStorage.getItem('sage_exp_cats')) || {
     'Еда и продукты': 25000, 'Жилье и КУ': 20000, 'Транспорт': 10000,
@@ -1191,9 +1260,9 @@ function migrateMonthKeys() {
     let changed = false;
     transactions = (transactions || []).map(t => {
         if (t && !t.mk) {
-            if (t.ts) { const d = new Date(t.ts); t.mk = monthKeyOf(d.getFullYear(), d.getMonth()); }
-            else if (t.month && MONTH_NUM[t.month] !== undefined) { t.mk = monthKeyOf(now.getFullYear(), MONTH_NUM[t.month]); }
-            else { t.mk = selectedMonth; }
+            if (t.ts) { const d = new Date(t.ts); t.mk = monthKeyOf(d.getFullYear(), d.getMonth()); if (!t.operationDate) t.operationDate = t.mk + '-' + String(d.getDate()).padStart(2,'0'); }
+            else if (t.month && MONTH_NUM[t.month] !== undefined) { t.mk = monthKeyOf(now.getFullYear(), MONTH_NUM[t.month]); if (!t.operationDate) t.operationDate = t.mk + '-' + String(now.getDate()).padStart(2,'0'); }
+            else { t.mk = selectedMonth; if (!t.operationDate) t.operationDate = selectedMonth + '-' + String(now.getDate()).padStart(2,'0'); }
             changed = true;
         }
         return t;
@@ -1255,6 +1324,18 @@ function txDisplay(tx) {
     }
     return `${fmt(tx.amountBase !== undefined ? tx.amountBase : tx.amount)} ${currentCurrency}`;
 }
+function saveNextIncomeDate() {
+    const el = document.getElementById('next-income-date');
+    const value = el ? el.value : '';
+    localStorage.setItem('sage_next_income_date', /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '');
+    saveAll();
+    renderUI();
+}
+function loadNextIncomeDateUI() {
+    const el = document.getElementById('next-income-date');
+    if (el) el.value = localStorage.getItem('sage_next_income_date') || '';
+}
+
 function saveAll() {
     lastLocalMutationAt = Date.now();
     cloudDirty = true;
@@ -1647,16 +1728,16 @@ function depositInterest(dep) {
     const days = Math.max(0, Math.floor((now - start) / 86400000));
     return dep.amount * (dep.rate / 100) * days / 365;
 }
-function openAddDepositModal() { triggerHaptic(); document.getElementById('deposit-modal').style.display = 'flex'; }
+function openAddDepositModal() { triggerHaptic(); document.getElementById('new-dep-name').value=''; document.getElementById('new-dep-amount').value=''; document.getElementById('new-dep-rate').value=''; document.getElementById('new-dep-date').value=new Date().toISOString().slice(0,10); document.getElementById('deposit-modal').style.display = 'flex'; }
 function closeAddDepositModal() { document.getElementById('deposit-modal').style.display = 'none'; }
 function saveNewDeposit() {
     const name = document.getElementById('new-dep-name').value.trim();
     const amount = Number(document.getElementById('new-dep-amount').value);
     const rate = Number(document.getElementById('new-dep-rate').value);
     const date = document.getElementById('new-dep-date').value || new Date().toISOString().slice(0, 10);
-    if (!name || !amount || !rate) return uiAlert('Заполните название, сумму и ставку');
+    if (!name || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(rate) || rate < 0) return uiAlert('Заполните название, сумму и ставку корректно');
     if (!isPro && deposits.length >= 2) { openProModal(`🏛 Бесплатная версия: до 2 вкладов, у вас уже ${deposits.length}. PRO открывает безлимит.`); return; }
-    deposits.push({ id: Date.now(), name, amount, rate, date });
+    deposits.push({ id: (crypto.randomUUID ? crypto.randomUUID() : ('dep-' + Date.now() + '-' + Math.random().toString(36).slice(2,8))), name, amount, rate, date, createdAt: Date.now(), updatedAt: Date.now() });
     saveAll(); closeAddDepositModal(); renderUI();
 }
 function editDepositField(id, field) {
@@ -1666,6 +1747,7 @@ function editDepositField(id, field) {
         if (val === null || String(val).trim() === '') return;
         if (field === 'amount') d.amount = Number(val) || d.amount;
         else d.rate = Number(val) || d.rate;
+        d.updatedAt = Date.now();
         saveAll(); renderUI();
     }, 'number');
 }
@@ -1687,7 +1769,7 @@ function renderDepositsList() {
         const card = document.createElement('div');
         card.style.cssText = 'padding:12px; background:rgba(255,209,102,0.06); border:1px solid rgba(255,209,102,0.25); border-radius:14px; margin-bottom:10px;';
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="deposit-top">
                 <div>
                     <div style="font-weight:bold; font-size:13px;"><i class="fa-solid fa-vault" style="color:var(--gold);"></i> ${esc(d.name)}</div>
                     <div style="font-size:11px; color:var(--text-muted);">открыт ${start.toLocaleDateString('ru-RU')} · ставка <b style="color:var(--gold);">${d.rate}%</b></div>
@@ -1750,7 +1832,7 @@ function renderDebtsList() {
     debts.forEach(d => {
         if (!d.repaid) { d.direction === 'owed' ? owedSum += d.amount : ioweSum += d.amount; }
         const row = document.createElement('div');
-        row.className = 'tx-item';
+        row.className = 'debt-row';
         row.style.opacity = d.repaid ? 0.45 : 1;
         row.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
@@ -1762,7 +1844,7 @@ function renderDebtsList() {
                     <div style="font-size:10px; color:var(--text-muted);">${d.direction === 'owed' ? 'должен мне' : 'я должен'}${d.note ? ' · ' + esc(d.note) : ''}</div>
                 </div>
             </div>
-            <div style="display:flex; align-items:center; gap:6px;">
+            <div class="debt-actions">
                 <span class="hideable" style="font-weight:bold; font-size:13px; color:${d.direction === 'owed' ? 'var(--accent-light)' : '#FFA8A8'};">${fmt(d.amount)} ${currentCurrency}</span>
                 <button class="btn-small ${d.repaid ? 'btn-outline' : ''}" style="font-size:10px;" data-debt-toggle="${d.id}" title="Отметить возврат долга">${d.repaid ? 'вернул ✓' : 'отметить возврат'}</button>
                 <i class="fa-solid fa-trash" style="font-size:11px; color:var(--danger); cursor:pointer;" data-debt-del="${d.id}"></i>
@@ -1840,9 +1922,9 @@ function csvCell(v) {
 function exportMonthCSV() {
     if (!proGate()) return;
     const mTx = transactions.filter(t => t.mk === selectedMonth);
-    let csv = 'Тип;Категория;Сумма;Валюта;Сумма в базовой;Дата\n';
+    let csv = 'Тип;Категория;Сумма;Валюта;Сумма в базовой;Дата операции;Добавлено\n';
     mTx.forEach(t => {
-        csv += [t.type, t.category, t.amount, t.currency || '₽', Math.round(t.amountBase || t.amount), t.date].map(csvCell).join(';') + '\n';
+        csv += [t.type, t.category, t.amount, t.currency || '₽', Math.round(t.amountBase || t.amount), formatOperationDate(t), t.createdAt ? new Date(t.createdAt).toISOString() : ''].map(csvCell).join(';') + '\n';
     });
     const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amountBase, 0);
     const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amountBase, 0);
@@ -2105,6 +2187,9 @@ function renderTransactionsList(filteredTxs) {
     const sortedTxs = filteredTxs.slice().sort((a,b) => {
         if (txSortOrder === 'amount_desc') return Number(b.amountBase ?? b.amount ?? 0) - Number(a.amountBase ?? a.amount ?? 0);
         if (txSortOrder === 'amount_asc') return Number(a.amountBase ?? a.amount ?? 0) - Number(b.amountBase ?? b.amount ?? 0);
+        const ad = txOperationDate(a), bd = txOperationDate(b);
+        const dtDate = String(bd).localeCompare(String(ad));
+        if (dtDate !== 0) return txSortOrder === 'oldest' ? -dtDate : dtDate;
         const dt = Number(b.ts || 0) - Number(a.ts || 0);
         return txSortOrder === 'oldest' ? -dt : dt;
     });
@@ -2129,7 +2214,7 @@ function renderTransactionsList(filteredTxs) {
                 <div class="tx-icon" style="${tx.type === 'expense' ? `color:${(catTags[tx.category] || 'want') === 'need' ? 'var(--accent-sage)' : 'var(--gold)'};` : ''}"><span class="category-emoji">${catEmoji(tx.category, tx.type)}</span></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}${familyIsFamily && tx.scope === 'personal' ? ' · 🔒 личная' : ''}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${esc(formatOperationDate(tx))}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}${familyIsFamily && tx.scope === 'personal' ? ' · 🔒 личная' : ''}</div>
                 </div>
             </div>
             <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : 'var(--text-main)')};">
@@ -2216,10 +2301,16 @@ function renderUI() {
 
     // Итоги всегда считаются по выбранному месяцу, независимо от активного поиска.
     const monthTxs = transactions.filter(t => t.mk === selectedMonth);
+    const familyModeScope = familyIsFamily ? (['family','all','personal'].includes(txScopeFilter) ? txScopeFilter : 'family') : 'all';
+    if (familyIsFamily && !['family','all','personal'].includes(txScopeFilter)) txScopeFilter = 'family';
+    if (!familyIsFamily) txScopeFilter = 'all';
+    const filterScope = (arr) => arr.filter(t => familyModeScope === 'all' || (familyModeScope === 'personal' ? t.scope === 'personal' : t.scope !== 'personal'));
+    const filterType = (arr) => txTypeFilter === 'all' ? arr : arr.filter(t => t.type === txTypeFilter);
+    const analyticsTxs = filterType(filterScope(monthTxs));
     let income = 0, expense = 0, savings = 0;
     const catTotals = {};
 
-    monthTxs.forEach(tx => {
+    analyticsTxs.forEach(tx => {
         const base = tx.amountBase !== undefined ? tx.amountBase : convertToBase(tx.amount, tx.currency || '₽');
         if (tx.type === 'income') income += base;
         else if (tx.type === 'expense') {
@@ -2227,10 +2318,18 @@ function renderUI() {
             if (!tx.trip) catTotals[tx.category] = (catTotals[tx.category] || 0) + base;
         } else if (tx.type === 'savings') savings += base;
     });
+    // Семейный план бюджета всегда считает только общие расходы, даже если
+    // пользователь временно включил фильтр «Только личные» в операциях.
+    const budgetCatTotals = {};
+    filterType(monthTxs.filter(t => t.scope !== 'personal')).forEach(tx => {
+        if (tx.type !== 'expense' || tx.trip) return;
+        const base = tx.amountBase !== undefined ? tx.amountBase : convertToBase(tx.amount, tx.currency || '₽');
+        budgetCatTotals[tx.category] = (budgetCatTotals[tx.category] || 0) + base;
+    });
 
     // Без поиска показываем операции выбранного месяца. При поиске ищем по всей истории,
     // включая предыдущие месяцы. Это позволяет найти, например, старую покупку по категории.
-    let visibleTxs = monthTxs;
+    let visibleTxs = filterType(filterScope(monthTxs));
     if (txSearchQuery) {
         const q = txSearchQuery;
         visibleTxs = transactions.filter(t => {
@@ -2241,11 +2340,19 @@ function renderUI() {
                 .filter(Boolean).join(' ').toLowerCase();
             return haystack.includes(q);
         });
-        visibleTxs = visibleTxs.slice().sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
+        visibleTxs = filterType(filterScope(visibleTxs));
+        visibleTxs = visibleTxs.slice().sort((a, b) => {
+            const ad = txOperationDate(a), bd = txOperationDate(b);
+            return String(bd).localeCompare(String(ad)) || Number(b.ts || 0) - Number(a.ts || 0);
+        });
     }
 
     if (familyIsFamily && txAuthorFilter !== 'all') visibleTxs = visibleTxs.filter(t => String(t.authorId || '') === String(txAuthorFilter));
     renderFamilyAuthorFilter();
+    if (familyIsFamily && !['family','all','personal'].includes(txScopeFilter)) txScopeFilter = 'family';
+    if (!familyIsFamily) txScopeFilter = 'all';
+    const scopeSel = document.getElementById('tx-scope-filter'); if (scopeSel) { scopeSel.value = txScopeFilter; scopeSel.style.display = familyIsFamily ? 'block' : 'none'; }
+    const typeSel = document.getElementById('tx-type-filter'); if (typeSel) typeSel.value = txTypeFilter;
     const sortSel = document.getElementById('tx-sort-filter'); if (sortSel) sortSel.value = txSortOrder;
     renderFamilyOverview();
     renderTransactionsList(visibleTxs);
@@ -2261,8 +2368,7 @@ function renderUI() {
     // микро-тренды к прошлому месяцу (п.18 аудита)
     const pKey = prevMonthKey(selectedMonth);
     let pInc = 0, pExp = 0;
-    transactions.forEach(t => {
-        if (t.mk !== pKey) return;
+    filterType(filterScope(transactions.filter(t => t.mk === pKey))).forEach(t => {
         const b = t.amountBase !== undefined ? t.amountBase : t.amount;
         if (t.type === 'income') pInc += b;
         if (t.type === 'expense') pExp += b;
@@ -2282,7 +2388,7 @@ function renderUI() {
     document.getElementById('forecast-expense').innerText = `${fmt(avgDaily * 30)} ${currentCurrency}`;
     renderDashboardPlanner(income, expense, savings);
 
-    renderBudgetPlanner(catTotals);
+    renderBudgetPlanner(budgetCatTotals);
     renderCategoryManager();
     renderGoalsList();
     renderDepositsList();
@@ -2367,6 +2473,8 @@ function openEditTx(id) {
     }
     document.getElementById('edit-tx-amount').value = tx.amount;
     document.getElementById('edit-tx-currency').value = tx.currency || '₽';
+    const editDate = document.getElementById('edit-tx-operation-date');
+    if (editDate) editDate.value = txOperationDate(tx);
     const editScopeGroup = document.getElementById('edit-tx-scope-group');
     const editScope = document.getElementById('edit-tx-scope');
     if (editScopeGroup) editScopeGroup.style.display = (familyIsFamily && tx.type !== 'savings') ? 'block' : 'none';
@@ -2391,7 +2499,15 @@ function saveEditTx() {
     tx.amount = amount;
     tx.currency = currency;
     tx.amountBase = convertToBase(amount, currency);
-    tx.ts = Date.now();
+    const editEnteredDate = document.getElementById('edit-tx-operation-date')?.value || '';
+    const editTs = Date.now();
+    const editDateKey = /^\d{4}-\d{2}-\d{2}$/.test(editEnteredDate) ? editEnteredDate : txOperationDate(tx);
+    tx.operationDate = editDateKey;
+    tx.mk = editDateKey ? editDateKey.slice(0,7) : tx.mk;
+    tx.month = editDateKey ? monthNameOf(tx.mk) : tx.month;
+    tx.date = formatOperationDate(tx);
+    tx.createdAt = Number(tx.createdAt || tx.ts || editTs);
+    tx.ts = editTs;
     if (tx.type !== 'savings') tx.category = document.getElementById('edit-tx-category').value;
     if (familyIsFamily && tx.type !== 'savings') tx.scope = document.getElementById('edit-tx-scope')?.value === 'personal' ? 'personal' : 'family';
     saveAll(); closeEditTx(); renderUI();
@@ -2422,7 +2538,7 @@ function renderPartnerPlashka() {
     const box = document.getElementById('partner-plashka');
     if (!box) return;
     clearInterval(plashkaTimer);
-    if (isPro) { box.innerHTML = ''; return; }
+    if (isPro || !partnerBanks.length) { box.innerHTML = ''; return; }
     const show = () => {
         const b = partnerBanks[plashkaIdx % partnerBanks.length];
         plashkaIdx++;
@@ -2641,7 +2757,14 @@ function renderGoalsList() {
 
 function renderPartnerBanks() {
     const container = document.getElementById('partner-banks-container');
+    const card = document.getElementById('deposit-partner-card');
+    if (!container) return;
     container.innerHTML = '';
+    if (card) card.style.display = 'block';
+    if (!partnerBanks.length) {
+        container.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:8px 0;">Партнёрские предложения пока не добавлены.</div>';
+        return;
+    }
     partnerBanks.forEach(bank => {
         const card = document.createElement('div');
         card.className = 'partner-card';
@@ -2707,8 +2830,9 @@ function renderYearlyChart() {
     const ctx = document.getElementById('yearlyChart').getContext('2d');
     if (yearlyChartInstance) yearlyChartInstance.destroy();
     const selY = selectedMonth.slice(0, 4); // год выбранного в селекторе месяца
-    const incByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'income').reduce((s, t) => s + (t.amountBase || t.amount), 0));
-    const expByMonth = allMonths.map((m, i) => transactions.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'expense').reduce((s, t) => s + (t.amountBase || t.amount), 0));
+    const yearlySource = familyIsFamily && txScopeFilter === 'personal' ? transactions.filter(t => t.scope === 'personal') : (familyIsFamily && txScopeFilter !== 'all' ? transactions.filter(t => t.scope !== 'personal') : transactions);
+    const incByMonth = allMonths.map((m, i) => yearlySource.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'income').reduce((s, t) => s + (t.amountBase || t.amount), 0));
+    const expByMonth = allMonths.map((m, i) => yearlySource.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'expense').reduce((s, t) => s + (t.amountBase || t.amount), 0));
     yearlyChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -2729,6 +2853,8 @@ if (addTxFab) addTxFab.addEventListener('click', () => openTxModal());
 function openTxModal(type = 'expense') {
     triggerHaptic();
     document.getElementById('tx-type').value = type;
+    const opDate = document.getElementById('tx-operation-date');
+    if (opDate) opDate.value = '';
     onTxTypeChange();
     document.getElementById('tx-modal').style.display = 'flex';
     setTimeout(() => { try { document.getElementById('tx-amount').focus(); } catch(e) {} }, 60);
@@ -2741,6 +2867,11 @@ document.getElementById('save-tx-btn').onclick = () => {
     const currency = document.getElementById('tx-currency').value;
     if (!amount || amount <= 0) return uiAlert("Введите корректную сумму");
     const base = convertToBase(amount, currency);
+    const createdAt = Date.now();
+    const enteredDate = document.getElementById('tx-operation-date')?.value || '';
+    const operationDate = /^\d{4}-\d{2}-\d{2}$/.test(enteredDate) ? enteredDate : (() => { const d = new Date(createdAt); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
+    const operationMk = operationDate.slice(0,7);
+    const operationLabel = formatOperationDate({ operationDate });
 
     if (type === 'savings') {
         const goalId = Number(document.getElementById('tx-goal-target').value);
@@ -2749,19 +2880,19 @@ document.getElementById('save-tx-btn').onclick = () => {
             goal.current += base;
             transactions.unshift({
                 id: crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now() + '-' + Math.random().toString(36).slice(2,8)), type: 'savings', category: `Копилка: ${goal.name}`,
-                amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now(),
+                amount, currency, amountBase: base, month: monthNameOf(operationMk), mk: operationMk, date: operationLabel, operationDate, createdAt, ts: createdAt,
                 authorId: platform.user?.id ? Number(platform.user.id) : undefined,
-                authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '',
+                authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '', source: 'app',
                 scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
             });
         }
     } else {
         const category = document.getElementById('tx-category').value;
         transactions.unshift({
-            id: crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now() + '-' + Math.random().toString(36).slice(2,8)), type, category, amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня',
+            id: crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now() + '-' + Math.random().toString(36).slice(2,8)), type, category, amount, currency, amountBase: base, month: monthNameOf(operationMk), mk: operationMk, date: operationLabel, operationDate, createdAt,
             trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(),
             authorId: platform.user?.id ? Number(platform.user.id) : undefined,
-            authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '',
+            authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '', source: 'app',
             scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
         });
     }
@@ -2799,6 +2930,7 @@ function getStatePayload() {
         personalTransactions: (transactions || []).filter(t => t.scope === 'personal'),
         personalGoals: (goals || []).filter(g => g.scope === 'personal'),
         deposits, debts, recurring,
+        personalSettings: { nextIncomeDate: localStorage.getItem('sage_next_income_date') || '' },
         expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
         catTags
     };
@@ -2842,6 +2974,7 @@ function mergeStates(localState, remoteState) {
     new Set([...Object.keys(rp), ...Object.keys(lp)]).forEach(k => {
         merged.budgetPlans[k] = { ...(rp[k] || {}), ...(lp[k] || {}) };
     });
+    merged.personalSettings = { ...(r.personalSettings || {}), ...(l.personalSettings || {}) };
     // Personal data is not part of the family snapshot returned by /sync.
     // Preserve local personal entries through a conflict and let the next sync
     // persist them to personal_data.
@@ -2864,6 +2997,10 @@ function applyState(s, options = {}) {
     if (next.incomeCategories){ incomeCategories = next.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
     if (next.categoryIcons)  { categoryIcons = next.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
     if (next.budgetPlans && typeof next.budgetPlans === 'object' && !Array.isArray(next.budgetPlans)) { budgetPlans = next.budgetPlans; localStorage.setItem('sage_budget_plans', JSON.stringify(budgetPlans)); }
+    if (next.personalSettings && typeof next.personalSettings === 'object' && !Array.isArray(next.personalSettings)) {
+        const v = String(next.personalSettings.nextIncomeDate || '');
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { localStorage.setItem('sage_next_income_date', v); const ni = document.getElementById('next-income-date'); if (ni) ni.value = v; }
+    }
     if (next.rates)           { rates = next.rates; localStorage.setItem('sage_rates', JSON.stringify(rates));
                                  const usd = document.getElementById('rate-usd'), eur = document.getElementById('rate-eur');
                                  if (usd) usd.value = rates.USD;
@@ -3693,6 +3830,7 @@ startCloudRefreshLoop();
     document.getElementById('rate-eur').value = rates.EUR;
     document.getElementById('week-limit-input').value = weekLimit || '';
     applyDailyReminderUI();
+    loadNextIncomeDateUI();
     applyTripUI();
 
     initMonthSelector();
