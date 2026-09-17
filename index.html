@@ -125,14 +125,14 @@
         .glass-card { background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; margin: 12px 16px; position: relative; }
         .header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 16px; }
         .header-actions { display:flex; gap:6px; align-items:center; min-width:0; flex-shrink:0; }
-        #month-selector { min-width: 132px; width:132px !important; max-width:132px; font-size:11px !important; }
+        #month-selector { min-width: 126px; max-width: 160px; }
         #tx-toolbar { display:flex; gap:6px; align-items:center; flex:1; justify-content:flex-end; min-width:0; flex-wrap:wrap; }
         #tx-author-filter, #tx-sort-filter { flex:0 0 auto; }
         @media (max-width: 390px) {
             .header { padding: 12px 10px; }
             .user-profile { min-width:0; flex:1; }
             .user-profile > div:last-child { min-width:0; }
-            #month-selector { min-width: 132px; width:132px !important; max-width:132px; padding-left:7px !important; padding-right:7px !important; font-size:11px !important; }
+            #month-selector { min-width: 112px; width:112px !important; padding-left:7px !important; padding-right:7px !important; }
             .icon-btn { width:32px; height:32px; }
             #tx-toolbar { justify-content:flex-start; width:100%; flex-basis:100%; }
             #tx-search { flex:1 1 130px; min-width:120px; }
@@ -643,19 +643,6 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
             <button class="btn-submit" style="background: transparent; border: 1px solid var(--card-border); color: var(--text-main);" onclick="document.getElementById('restore-input').click()"><i class="fa-solid fa-upload"></i> Восстановить из файла</button>
         </div>
 
-        <div class="glass-card" style="margin-top:0;">
-            <div class="toggle-row">
-                <div>
-                    <div style="font-size:13px;font-weight:600;">Следующий доход</div>
-                    <div style="font-size:11px;color:var(--text-muted);">Дата используется для расчёта дневного лимита. Если даты нет, приложение ничего не угадывает.</div>
-                </div>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
-                <input type="date" class="form-input" id="next-income-date" style="flex:1;min-width:0;">
-                <button type="button" class="btn-small btn-outline" onclick="clearNextIncomeDate()">Очистить</button>
-            </div>
-        </div>
-
         <div class="section-title">Связь и опасная зона</div>
         <button class="btn-submit" style="margin: 4px 16px 4px; width: calc(100% - 32px); background: rgba(255,255,255,0.1); border: 1px solid var(--card-border); color: var(--text-main);" onclick="sendFeedback()"><i class="fa-solid fa-comment-dots"></i> Написать разработчику</button>
         <button class="btn-submit btn-danger" style="margin: 4px 16px 12px; width: calc(100% - 32px);" onclick="clearAllData()">Сбросить все данные</button>
@@ -686,13 +673,13 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Категория</label>
                 <select class="form-select" id="tx-category"></select>
             </div>
-            <div class="form-group" id="tx-scope-group">
+            <div class="form-group" id="tx-scope-group" style="display:none;">
                 <label class="form-label">Видимость</label>
                 <select class="form-select" id="tx-scope">
                     <option value="family">🏠 Общая — видна семье</option>
                     <option value="personal">👤 Личная — видна только мне</option>
                 </select>
-                <div id="tx-scope-hint" style="font-size:10px;color:var(--text-muted);margin-top:5px;">Личная операция не входит в семейный бюджет и аналитику.</div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:5px;">Личная операция не входит в семейный бюджет и аналитику.</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Сумма</label>
@@ -737,6 +724,13 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                     <option value="₽">₽ Рубль</option>
                     <option value="$">$ Доллар</option>
                     <option value="€">€ Евро</option>
+                </select>
+            </div>
+            <div class="form-group" id="edit-tx-scope-group" style="display:none;">
+                <label class="form-label">Видимость</label>
+                <select class="form-select" id="edit-tx-scope">
+                    <option value="family">🏠 Общая — видна семье</option>
+                    <option value="personal">👤 Личная — видна только мне</option>
                 </select>
             </div>
             <button class="btn-submit" onclick="saveEditTx()">Сохранить</button>
@@ -871,13 +865,12 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
                 <label class="form-label">Автоперевод % с каждого дохода (0 — выкл)</label>
                 <input type="number" class="form-input" id="new-goal-autopct" placeholder="10" inputmode="decimal">
             </div>
-            <div class="form-group" id="new-goal-scope-group">
-                <label class="form-label">Видимость копилки</label>
+            <div class="form-group" id="new-goal-scope-group" style="display:none;">
+                <label class="form-label">Видимость</label>
                 <select class="form-select" id="new-goal-scope">
                     <option value="personal">👤 Личная — только я</option>
                     <option value="family">🏠 Общая — семейная копилка</option>
                 </select>
-                <div id="new-goal-scope-hint" style="font-size:10px;color:var(--text-muted);margin-top:5px;"></div>
             </div>
             <button class="btn-submit" onclick="saveNewGoal()">Создать цель</button>
         </div>
@@ -1056,7 +1049,6 @@ let trialUsed = localStorage.getItem('sage_trial_used') === 'true';
 let dailyReminderEnabled = localStorage.getItem('sage_daily_reminder_enabled') !== 'false';
 let dailyReminderHour = Number(localStorage.getItem('sage_daily_reminder_hour')) || 20;
 let dailyReminderTimezone = localStorage.getItem('sage_daily_reminder_timezone') || (Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Moscow');
-let nextIncomeDate = localStorage.getItem('sage_next_income_date') || '';
 if (proUntil && Date.now() > proUntil) { localStorage.removeItem('sage_pro_until'); proUntil = 0; }
 // trialUntil сохраняем после окончания, чтобы показывать дату окончания; покупка PRO остаётся доступной.
 let currentCurrency = localStorage.getItem('sage_currency') || '₽';
@@ -1265,6 +1257,8 @@ function txDisplay(tx) {
 }
 function saveAll() {
     lastLocalMutationAt = Date.now();
+    cloudDirty = true;
+    localStorage.setItem('sage_cloud_dirty', '1');
     localStorage.setItem('sage_txs', JSON.stringify(transactions));
     localStorage.setItem('sage_goals', JSON.stringify(goals));
     localStorage.setItem('sage_deposits', JSON.stringify(deposits));
@@ -1482,25 +1476,6 @@ async function saveDailyReminder() {
     try { await fetch(API_URL+'/notifications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:platform.initData,action:'save',enabled:dailyReminderEnabled,hour:dailyReminderHour,timezone:dailyReminderTimezone})}); } catch(e) {}
 }
 function toggleDailyReminder() { dailyReminderEnabled=!dailyReminderEnabled; localStorage.setItem('sage_daily_reminder_enabled',String(dailyReminderEnabled)); applyDailyReminderUI(); saveDailyReminder(); }
-function applyNextIncomeDateUI() {
-    const el = document.getElementById('next-income-date');
-    if (el) el.value = nextIncomeDate || '';
-}
-function saveNextIncomeDate() {
-    const el = document.getElementById('next-income-date');
-    nextIncomeDate = String(el?.value || '');
-    if (nextIncomeDate) localStorage.setItem('sage_next_income_date', nextIncomeDate);
-    else localStorage.removeItem('sage_next_income_date');
-    try { cloudSave(); } catch (e) {}
-    renderUI();
-}
-function clearNextIncomeDate() {
-    nextIncomeDate = '';
-    localStorage.removeItem('sage_next_income_date');
-    const el = document.getElementById('next-income-date'); if (el) el.value = '';
-    try { cloudSave(); } catch (e) {}
-    renderUI();
-}
 
 function saveRates() {
     rates.USD = Number(document.getElementById('rate-usd').value) || rates.USD;
@@ -1949,15 +1924,9 @@ function closeAddCatModal() { document.getElementById('cat-modal').style.display
 function openAddGoalModal() {
     triggerHaptic();
     const g = document.getElementById('new-goal-scope-group');
-    if (g) g.style.display = 'block';
+    if (g) g.style.display = familyIsFamily ? 'block' : 'none';
     const s = document.getElementById('new-goal-scope');
-    const hint = document.getElementById('new-goal-scope-hint');
-    if (s) {
-        s.value = 'personal';
-        const familyOpt = s.querySelector('option[value="family"]');
-        if (familyOpt) familyOpt.disabled = !familyIsFamily;
-    }
-    if (hint) hint.textContent = familyIsFamily ? 'Общая копилка видна семье и доступна всем участникам.' : 'Сейчас доступна только личная копилка. Чтобы создать общую, сначала подключите семейный режим.';
+    if (s) s.value = 'personal';
     document.getElementById('goal-modal').style.display = 'flex';
 }
 function closeAddGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
@@ -2082,19 +2051,7 @@ function onTxTypeChange() {
         }
     }
     const scopeGroup = document.getElementById('tx-scope-group');
-    const scopeSelect = document.getElementById('tx-scope');
-    const scopeHint = document.getElementById('tx-scope-hint');
-    if (scopeGroup) scopeGroup.style.display = 'block';
-    if (scopeSelect) {
-        const familyOpt = scopeSelect.querySelector('option[value="family"]');
-        if (familyOpt) familyOpt.disabled = !familyIsFamily;
-        if (!familyIsFamily) scopeSelect.value = 'personal';
-        if (type === 'savings') {
-            const selectedGoal = goals.find(g => g.id === document.getElementById('tx-goal-target')?.value);
-            if (selectedGoal) scopeSelect.value = selectedGoal.scope === 'family' && familyIsFamily ? 'family' : 'personal';
-        }
-    }
-    if (scopeHint) scopeHint.textContent = familyIsFamily ? '🏠 Общая входит в семейный бюджет. 👤 Личная видна только вам и не влияет на семейные итоги.' : 'Личная операция сохраняется только в вашем личном пространстве.';
+    if (scopeGroup) scopeGroup.style.display = (familyIsFamily && type !== 'savings') ? 'block' : 'none';
 }
 function populateGoalDropdown() {
     const select = document.getElementById('tx-goal-target');
@@ -2172,7 +2129,7 @@ function renderTransactionsList(filteredTxs) {
                 <div class="tx-icon" style="${tx.type === 'expense' ? `color:${(catTags[tx.category] || 'want') === 'need' ? 'var(--accent-sage)' : 'var(--gold)'};` : ''}"><span class="category-emoji">${catEmoji(tx.category, tx.type)}</span></div>
                 <div>
                     <div style="font-weight: bold; font-size: 13px;">${esc(tx.category)}</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">${esc(tx.date)}${transactionAuthorName(tx) ? ' · 👤 ' + esc(transactionAuthorName(tx)) : ''}${familyIsFamily && tx.scope === 'personal' ? ' · 🔒 личная' : ''}</div>
                 </div>
             </div>
             <div class="hideable" style="font-weight: bold; font-size: 13px; color: ${tx.type === 'income' ? 'var(--accent-light)' : (tx.type === 'savings' ? 'var(--gold)' : 'var(--text-main)')};">
@@ -2410,6 +2367,10 @@ function openEditTx(id) {
     }
     document.getElementById('edit-tx-amount').value = tx.amount;
     document.getElementById('edit-tx-currency').value = tx.currency || '₽';
+    const editScopeGroup = document.getElementById('edit-tx-scope-group');
+    const editScope = document.getElementById('edit-tx-scope');
+    if (editScopeGroup) editScopeGroup.style.display = (familyIsFamily && tx.type !== 'savings') ? 'block' : 'none';
+    if (editScope) editScope.value = tx.scope === 'personal' ? 'personal' : 'family';
     document.getElementById('tx-edit-modal').style.display = 'flex';
 }
 function closeEditTx() {
@@ -2430,7 +2391,9 @@ function saveEditTx() {
     tx.amount = amount;
     tx.currency = currency;
     tx.amountBase = convertToBase(amount, currency);
+    tx.ts = Date.now();
     if (tx.type !== 'savings') tx.category = document.getElementById('edit-tx-category').value;
+    if (familyIsFamily && tx.type !== 'savings') tx.scope = document.getElementById('edit-tx-scope')?.value === 'personal' ? 'personal' : 'family';
     saveAll(); closeEditTx(); renderUI();
 }
 
@@ -2657,7 +2620,7 @@ function renderGoalsList() {
         const card = document.createElement('div');
         card.style.cssText = 'margin-bottom:18px;padding-bottom:2px;';
         card.innerHTML = `
-            <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 24px;align-items:center;column-gap:8px;margin-bottom:6px;">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 24px;align-items:center;column-gap:8px;margin-bottom:7px;">
                 <div style="min-width:0;">
                     <div style="font-weight:bold;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(g.name)}</div>
                     <div class="hideable" style="font-size:12px;color:var(--text-muted);margin-top:2px;">${fmt(current)} / ${fmt(target)} ${currentCurrency} · ${scope}</div>
@@ -2785,21 +2748,21 @@ document.getElementById('save-tx-btn').onclick = () => {
         if (goal) {
             goal.current += base;
             transactions.unshift({
-                id: Date.now(), type: 'savings', category: `Копилка: ${goal.name}`,
+                id: crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now() + '-' + Math.random().toString(36).slice(2,8)), type: 'savings', category: `Копилка: ${goal.name}`,
                 amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня', ts: Date.now(),
                 authorId: platform.user?.id ? Number(platform.user.id) : undefined,
                 authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '',
-                scope: (goal.scope === 'family' && familyIsFamily) ? 'family' : 'personal'
+                scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
             });
         }
     } else {
         const category = document.getElementById('tx-category').value;
         transactions.unshift({
-            id: Date.now(), type, category, amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня',
+            id: crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now() + '-' + Math.random().toString(36).slice(2,8)), type, category, amount, currency, amountBase: base, month: monthNameOf(selectedMonth), mk: selectedMonth, date: 'Сегодня',
             trip: (type === 'expense' && tripMode) || undefined, ts: Date.now(),
             authorId: platform.user?.id ? Number(platform.user.id) : undefined,
             authorName: platform.user ? [platform.user.first_name, platform.user.last_name].filter(Boolean).join(' ').trim() : '',
-            scope: document.getElementById('tx-scope')?.value === 'personal' ? 'personal' : 'family'
+            scope: (familyIsFamily && document.getElementById('tx-scope')?.value === 'personal') ? 'personal' : 'family'
         });
     }
     if (type === 'income') applyAutoSavings(base);
@@ -2823,109 +2786,97 @@ document.getElementById('currency-select').onchange = (e) => {
    ВАЖНО: после деплоя замените URL ниже на ваш (шаг 3 инструкции)
    ============================================================ */
 const API_URL = 'https://sage-api.ivan-xls.workers.dev';
-let cloudSaveTimer = null, cloudVersion = 0;
-let cloudRetryTimer = null;
+let cloudSaveTimer = null, cloudVersion = 0, cloudFamilyId = localStorage.getItem('sage_cloud_family_id') || '';
 let cloudSaveInFlight = false;
 let cloudSavePending = false;
 let cloudSaveGeneration = 0;
+let cloudDirty = localStorage.getItem('sage_cloud_dirty') === '1';
 let lastLocalMutationAt = 0;
 
 function getStatePayload() {
     return {
-        transactions, goals, deposits, debts, recurring,
+        transactions, goals,
+        personalTransactions: (transactions || []).filter(t => t.scope === 'personal'),
+        personalGoals: (goals || []).filter(g => g.scope === 'personal'),
+        deposits, debts, recurring,
         expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
-        catTags,
-        personalSettings: { nextIncomeDate }
+        catTags
     };
 }
-function entityStamp(x) {
-    if (!x || typeof x !== 'object') return 0;
-    const a = Number(x.ts || 0);
-    const b = Date.parse(x.updatedAt || x.updated_at || x.createdAt || x.created_at || '') || 0;
-    return Math.max(Number.isFinite(a) ? a : 0, Number.isFinite(b) ? b : 0);
+function mergeEntityArrays(localArr, remoteArr) {
+    const local = Array.isArray(localArr) ? localArr : [];
+    const remote = Array.isArray(remoteArr) ? remoteArr : [];
+    const map = new Map();
+    const score = (x) => Number(x?.updatedAt || x?.updated_at || x?.ts || 0);
+    remote.forEach(x => { if (x && x.id != null) map.set(String(x.id), x); });
+    local.forEach(x => {
+        if (!x || x.id == null) return;
+        const k = String(x.id), r = map.get(k);
+        if (!r || score(x) >= score(r)) map.set(k, x);
+    });
+    return Array.from(map.values());
 }
-function mergeEntityArrays(localArr, incomingArr, limit = 5000) {
-    const byId = new Map();
-    (Array.isArray(incomingArr) ? incomingArr : []).forEach(x => {
-        if (!x || typeof x !== 'object') return;
-        const id = x.id == null ? '' : String(x.id);
-        if (id) byId.set(id, x);
-    });
-    (Array.isArray(localArr) ? localArr : []).forEach(x => {
-        if (!x || typeof x !== 'object') return;
-        const id = x.id == null ? '' : String(x.id);
-        if (!id) return;
-        const old = byId.get(id);
-        // Локальная новая сущность не должна исчезнуть из-за ответа старого сервера.
-        // Для одного id более свежая версия побеждает.
-        if (!old || entityStamp(x) >= entityStamp(old)) byId.set(id, x);
-    });
-    const out = Array.from(byId.values());
-    out.sort((a,b) => entityStamp(b) - entityStamp(a));
-    return out.slice(0, limit);
+function mergeObjectMaps(localObj, remoteObj) {
+    const l = (localObj && typeof localObj === 'object' && !Array.isArray(localObj)) ? localObj : {};
+    const r = (remoteObj && typeof remoteObj === 'object' && !Array.isArray(remoteObj)) ? remoteObj : {};
+    return { ...r, ...l };
 }
-function mergeState(localState, incomingState) {
-    const local = localState && typeof localState === 'object' ? localState : {};
-    const incoming = incomingState && typeof incomingState === 'object' ? incomingState : {};
-    const out = { ...incoming, ...local };
-    for (const k of ['transactions','goals','deposits','debts','recurring']) {
-        out[k] = mergeEntityArrays(local[k], incoming[k], k === 'transactions' ? 5000 : 500);
-    }
-    const mergeObj = (a,b) => ({
-        ...((b && typeof b === 'object' && !Array.isArray(b)) ? b : {}),
-        ...((a && typeof a === 'object' && !Array.isArray(a)) ? a : {})
+function mergeStates(localState, remoteState) {
+    const l = localState || {}, r = remoteState || {};
+    const merged = { ...r };
+    // Operations are append/update oriented. On conflict we must not throw away
+    // a local operation that was absent from the server snapshot (e.g. bot wrote
+    // another operation between the client's read and write).
+    merged.transactions = mergeEntityArrays(l.transactions, r.transactions);
+    merged.goals = mergeEntityArrays(l.goals, r.goals);
+    merged.deposits = mergeEntityArrays(l.deposits, r.deposits);
+    merged.debts = mergeEntityArrays(l.debts, r.debts);
+    merged.recurring = mergeEntityArrays(l.recurring, r.recurring);
+    merged.expenseCategories = mergeObjectMaps(l.expenseCategories, r.expenseCategories);
+    merged.categoryIcons = mergeObjectMaps(l.categoryIcons, r.categoryIcons);
+    merged.catTags = mergeObjectMaps(l.catTags, r.catTags);
+    merged.incomeCategories = Array.from(new Set([...(r.incomeCategories || []), ...(l.incomeCategories || [])])).slice(0,100);
+    const rp = (r.budgetPlans && typeof r.budgetPlans === 'object' && !Array.isArray(r.budgetPlans)) ? r.budgetPlans : {};
+    const lp = (l.budgetPlans && typeof l.budgetPlans === 'object' && !Array.isArray(l.budgetPlans)) ? l.budgetPlans : {};
+    merged.budgetPlans = {};
+    new Set([...Object.keys(rp), ...Object.keys(lp)]).forEach(k => {
+        merged.budgetPlans[k] = { ...(rp[k] || {}), ...(lp[k] || {}) };
     });
-    out.expenseCategories = mergeObj(local.expenseCategories, incoming.expenseCategories);
-    out.categoryIcons = mergeObj(local.categoryIcons, incoming.categoryIcons);
-    out.catTags = mergeObj(local.catTags, incoming.catTags);
-    out.budgetPlans = mergeObj(local.budgetPlans, incoming.budgetPlans);
-    const li = Array.isArray(local.incomeCategories) ? local.incomeCategories : [];
-    const ii = Array.isArray(incoming.incomeCategories) ? incoming.incomeCategories : [];
-    out.incomeCategories = [...new Set([...ii, ...li])].slice(0,100);
-    return out;
+    // Personal data is not part of the family snapshot returned by /sync.
+    // Preserve local personal entries through a conflict and let the next sync
+    // persist them to personal_data.
+    return merged;
 }
 function applyState(s, options = {}) {
     if (!s) return;
-    const useMerge = options.merge === true;
-    const incoming = s;
-    const merged = useMerge ? mergeState({
-        transactions, goals, deposits, debts, recurring,
-        expenseCategories, incomeCategories, categoryIcons, budgetPlans, rates, currency: currentCurrency,
-        catTags, personalSettings: { nextIncomeDate }
-    }, incoming) : incoming;
-    const data = merged;
-    if (data.transactions)   { transactions = data.transactions; localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
-    if (data.goals)          { goals = data.goals; localStorage.setItem('sage_goals', JSON.stringify(goals)); }
-    if (data.deposits)       { deposits = data.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
-    if (data.debts)          { debts = data.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
-    if (data.recurring)      { recurring = data.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
-    if (data.expenseCategories) {
-        const incomingCats = (typeof data.expenseCategories === 'object' && !Array.isArray(data.expenseCategories)) ? data.expenseCategories : {};
-        expenseCategories = incomingCats;
+    const next = options.merge ? mergeStates({ transactions, goals, deposits, debts, recurring, expenseCategories, incomeCategories, categoryIcons, budgetPlans, catTags, rates, currency: currentCurrency }, s) : s;
+    if (next.transactions)   { transactions = next.transactions; localStorage.setItem('sage_txs', JSON.stringify(transactions)); }
+    if (next.goals)          { goals = next.goals.map(g => ({ ...g, scope: g.scope === 'family' ? 'family' : 'personal' })); localStorage.setItem('sage_goals', JSON.stringify(goals)); }
+    if (next.deposits)       { deposits = next.deposits; localStorage.setItem('sage_deposits', JSON.stringify(deposits)); }
+    if (next.debts)          { debts = next.debts; localStorage.setItem('sage_debts', JSON.stringify(debts)); }
+    if (next.recurring)      { recurring = next.recurring; localStorage.setItem('sage_rec', JSON.stringify(recurring)); }
+    if (next.expenseCategories) {
+        const incoming = (typeof next.expenseCategories === 'object' && !Array.isArray(next.expenseCategories)) ? next.expenseCategories : {};
+        expenseCategories = incoming;
         localStorage.setItem('sage_exp_cats', JSON.stringify(expenseCategories));
     }
-    if (data.catTags)        { catTags = data.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
-    if (data.incomeCategories) { incomeCategories = data.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
-    if (data.categoryIcons)  { categoryIcons = data.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
-    if (data.budgetPlans && typeof data.budgetPlans === 'object' && !Array.isArray(data.budgetPlans)) { budgetPlans = data.budgetPlans; localStorage.setItem('sage_budget_plans', JSON.stringify(budgetPlans)); }
-    if (data.rates)          { rates = data.rates; localStorage.setItem('sage_rates', JSON.stringify(rates));
-                               document.getElementById('rate-usd').value = rates.USD;
-                               document.getElementById('rate-eur').value = rates.EUR; }
-    if (data.currency)       { currentCurrency = data.currency; localStorage.setItem('sage_currency', currentCurrency);
-                               document.getElementById('currency-select').value = currentCurrency; }
-    if (data.personalSettings && typeof data.personalSettings === 'object') {
-        nextIncomeDate = String(data.personalSettings.nextIncomeDate || '');
-        if (nextIncomeDate) localStorage.setItem('sage_next_income_date', nextIncomeDate);
-        else localStorage.removeItem('sage_next_income_date');
-        const ni = document.getElementById('next-income-date'); if (ni) ni.value = nextIncomeDate;
-    }
-    if (Object.prototype.hasOwnProperty.call(data, 'proUntil') || Object.prototype.hasOwnProperty.call(data, 'isPro')) {
-        proUntil = Number(data.proUntil) || 0;
-        trialUntil = Number(data.trialUntil) || 0;
-        isPro = !!data.isPro && proUntil > Date.now();
+    if (next.catTags)        { catTags = next.catTags; localStorage.setItem('sage_cat_tags', JSON.stringify(catTags)); }
+    if (next.incomeCategories){ incomeCategories = next.incomeCategories; localStorage.setItem('sage_inc_cats', JSON.stringify(incomeCategories)); }
+    if (next.categoryIcons)  { categoryIcons = next.categoryIcons; localStorage.setItem('sage_cat_icons', JSON.stringify(categoryIcons)); }
+    if (next.budgetPlans && typeof next.budgetPlans === 'object' && !Array.isArray(next.budgetPlans)) { budgetPlans = next.budgetPlans; localStorage.setItem('sage_budget_plans', JSON.stringify(budgetPlans)); }
+    if (next.rates)           { rates = next.rates; localStorage.setItem('sage_rates', JSON.stringify(rates));
+                                 const usd = document.getElementById('rate-usd'), eur = document.getElementById('rate-eur');
+                                 if (usd) usd.value = rates.USD;
+                                 if (eur) eur.value = rates.EUR; }
+    if (next.currency)        { currentCurrency = next.currency; localStorage.setItem('sage_currency', currentCurrency);
+                                 const cs = document.getElementById('currency-select'); if (cs) cs.value = currentCurrency; }
+    if (Object.prototype.hasOwnProperty.call(next, 'proUntil') || Object.prototype.hasOwnProperty.call(next, 'isPro')) {
+        proUntil = Number(next.proUntil) || 0;
+        trialUntil = Number(next.trialUntil) || 0;
+        isPro = !!next.isPro && proUntil > Date.now();
         localStorage.setItem('sage_pro_until', String(proUntil));
         localStorage.setItem('sage_trial_until', String(trialUntil));
-        trialUsed = !!data.usedTrial; localStorage.setItem('sage_trial_used', trialUsed ? 'true' : 'false');
+        trialUsed = !!next.usedTrial; localStorage.setItem('sage_trial_used', trialUsed ? 'true' : 'false');
         localStorage.setItem('sage_is_pro', isPro ? 'true' : 'false');
     }
 }
@@ -2954,28 +2905,27 @@ async function cloudSave() {
             const d = await r.json().catch(() => null);
 
             if (d && d.conflict) {
-                // Конфликт не означает «забыть локальную правку». Сохраняем локальный
-                // snapshot, сливаем его с серверным и отправляем повторно уже с новой version.
-                const localBeforeConflict = getStatePayload();
-                if (d.state) applyState(mergeState(localBeforeConflict, d.state));
-                if (d.version) cloudVersion = Number(d.version);
-                renderUI();
+                // Конфликт не должен уничтожать локальную правку. Сливаем локальный
+                // state с серверным по id/времени и повторяем запись с новой version.
+                if (d.state) applyState(d.state, { merge: true });
+                if (d.familyId) { cloudFamilyId = String(d.familyId); localStorage.setItem('sage_cloud_family_id', cloudFamilyId); }
+                if (Number.isSafeInteger(Number(d.version))) cloudVersion = Number(d.version);
                 cloudSavePending = true;
+                renderUI();
                 return;
             }
 
             if (d && d.version) cloudVersion = Number(d.version);
             if (!r.ok || !d || d.error) {
                 console.warn('[schitay] cloud sync failed', r.status, d);
-                cloudSavePending = true;
-                clearTimeout(cloudRetryTimer);
-                cloudRetryTimer = setTimeout(() => { if (cloudSavePending) cloudSave(); }, 5000);
+            } else if (d.ok === true && sentGeneration === cloudSaveGeneration) {
+                // Only mark clean when the exact generation we sent was still the
+                // newest local generation at the moment the server accepted it.
+                cloudDirty = false;
+                localStorage.removeItem('sage_cloud_dirty');
             }
         } catch (e) {
             console.warn('[schitay] cloud sync unavailable', e);
-            cloudSavePending = true;
-            clearTimeout(cloudRetryTimer);
-            cloudRetryTimer = setTimeout(() => { if (cloudSavePending) cloudSave(); }, 5000);
         } finally {
             cloudSaveInFlight = false;
             // Если правки появились во время запроса или конфликт был обработан,
@@ -2990,8 +2940,9 @@ async function cloudSave() {
         }
     }, 1500);
 }
-async function cloudLoad(options = {}) {
+async function cloudLoad() {
     if (!platform.inTelegram) return;
+    const loadStartedAt = Date.now();
     try {
         const r = await fetch(API_URL + '/state', {
             method: 'POST',
@@ -3000,8 +2951,30 @@ async function cloudLoad(options = {}) {
         });
         if (!r.ok) return;
         const d = await r.json();
-        if (d.version) cloudVersion = Number(d.version);
-        if (d.state) applyState(d.state, { merge: options.merge === true });
+        const incomingFamilyId = d.familyId ? String(d.familyId) : '';
+        const familyChanged = !!incomingFamilyId && !!cloudFamilyId && incomingFamilyId !== cloudFamilyId;
+        const hadUnsyncedLocalChanges = cloudDirty || cloudSaveInFlight || cloudSavePending;
+        if (incomingFamilyId) {
+            cloudFamilyId = incomingFamilyId;
+            localStorage.setItem('sage_cloud_family_id', cloudFamilyId);
+        }
+        if (Number.isSafeInteger(Number(d.version))) cloudVersion = Number(d.version);
+        if (d.state) {
+            // First load/new family: server is authoritative. During an active local
+            // edit, merge instead of replacing the user's just-created operation.
+            applyState(d.state, { merge: !familyChanged && hadUnsyncedLocalChanges });
+            if (!familyChanged && hadUnsyncedLocalChanges) {
+                cloudDirty = true;
+                localStorage.setItem('sage_cloud_dirty', '1');
+                cloudSavePending = true;
+                // Если предыдущий sync уже завершился ошибкой, одного флага pending
+                // недостаточно — запускаем новый debounce-sync явно.
+                if (!cloudSaveInFlight) {
+                    clearTimeout(cloudSaveTimer);
+                    cloudSaveTimer = setTimeout(() => cloudSave(), 100);
+                }
+            }
+        }
         if (d.botUsername) window._botUsername = d.botUsername;
         if (typeof d.isFamily === 'boolean') familyIsFamily = d.isFamily;
         if (d.role) familyRole = d.role;
@@ -3674,10 +3647,11 @@ document.addEventListener('click', (e) => {
 let refreshInFlight = false;
 async function refreshFromCloud() {
     if (!platform.inTelegram || refreshInFlight) return;
-    // Не перетираем локальную правку ответом старого облачного состояния.
-    if (cloudSaveInFlight || cloudSavePending) return;
+    // Пока есть несохранённая локальная правка, пассивный refresh не имеет права
+    // заменить её серверным snapshot. Сначала даём debounce-sync закончиться.
+    if (cloudDirty || cloudSaveInFlight || cloudSavePending) return;
     refreshInFlight = true;
-    try { await cloudLoad({ merge: true }); renderUI(); } catch (e) {} finally { refreshInFlight = false; }
+    try { await cloudLoad(); renderUI(); } catch (e) {} finally { refreshInFlight = false; }
 }
 let cloudRefreshTimer = null;
 function startCloudRefreshLoop() {
@@ -3685,7 +3659,7 @@ function startCloudRefreshLoop() {
     if (!platform.inTelegram) return;
     cloudRefreshTimer = setInterval(() => {
         if (document.visibilityState === 'visible') refreshFromCloud();
-    }, 12000);
+    }, 5000);
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFromCloud(); });
 window.addEventListener('focus', refreshFromCloud);
@@ -3700,8 +3674,6 @@ startCloudRefreshLoop();
     renderUI();
     renderFamilyStatus();
     applyDailyReminderUI();
-    applyNextIncomeDateUI();
-    document.getElementById('next-income-date')?.addEventListener('change', saveNextIncomeDate);
     const cloudPromise = cloudLoad().catch(e => console.error('cloudLoad failed', e));
     const ratesPromise = fetchCbRates().catch(() => {});
     const partnersPromise = fetchPartners().catch(() => {});
