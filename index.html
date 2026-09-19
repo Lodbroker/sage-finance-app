@@ -332,12 +332,12 @@ try { var __t = localStorage.getItem('sage_theme') || 'system'; document.body.se
     <!-- PAGE 1: DASHBOARD -->
     <div class="app-page active" id="page-dashboard">
         <div class="kpi-grid">
-            <div class="kpi-card"><div class="kpi-title">Доходы</div><div class="kpi-value income hideable" id="total-income">0 ₽</div><div class="hideable" id="trend-income" style="font-size:10px; color:var(--text-muted); margin-top:2px;"></div></div>
-            <div class="kpi-card"><div class="kpi-title">Расходы</div><div class="kpi-value expense hideable" id="total-expense">0 ₽</div><div class="hideable" id="trend-expense" style="font-size:10px; color:var(--text-muted); margin-top:2px;"></div></div>
-            <div class="kpi-card"><div class="kpi-title">Накопления</div><div class="kpi-value savings hideable" id="total-savings">0 ₽</div></div>
-            <div class="kpi-card"><div class="kpi-title">Чистый остаток</div><div class="kpi-value hideable" id="total-balance">0 ₽</div></div>
-            <div class="kpi-card"><div class="kpi-title">Трат в день (средн.)</div><div class="kpi-value hideable" id="avg-daily">0 ₽</div></div>
-            <div class="kpi-card"><div class="kpi-title">Прогноз расходов</div><div class="kpi-value hideable" id="forecast-expense">0 ₽</div></div>
+            <div class="kpi-card"><div class="kpi-title">Доходы</div><div class="kpi-value income hideable" id="total-income">—</div><div class="hideable" id="trend-income" style="font-size:10px; color:var(--text-muted); margin-top:2px;"></div></div>
+            <div class="kpi-card"><div class="kpi-title">Расходы</div><div class="kpi-value expense hideable" id="total-expense">—</div><div class="hideable" id="trend-expense" style="font-size:10px; color:var(--text-muted); margin-top:2px;"></div></div>
+            <div class="kpi-card"><div class="kpi-title">Накопления</div><div class="kpi-value savings hideable" id="total-savings">—</div></div>
+            <div class="kpi-card"><div class="kpi-title">Чистый остаток</div><div class="kpi-value hideable" id="total-balance">—</div></div>
+            <div class="kpi-card"><div class="kpi-title">Трат в день (средн.)</div><div class="kpi-value hideable" id="avg-daily">—</div></div>
+            <div class="kpi-card"><div class="kpi-title">Прогноз расходов</div><div class="kpi-value hideable" id="forecast-expense">—</div></div>
         </div>
 
         <div id="partner-plashka"></div>
@@ -2297,7 +2297,10 @@ function formatProDate(ts) {
     if (!ts) return '';
     return new Date(ts).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' в ' + new Date(ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
 }
+let appReady = false;
+
 function renderUI() {
+    if (!appReady) return;
     const trialActive = isPro && trialUntil > Date.now();
     const trialExpired = trialUntil > 0 && trialUntil <= Date.now();
     if (isPro) {
@@ -2324,13 +2327,14 @@ function renderUI() {
 
     // Итоги всегда считаются по выбранному месяцу, независимо от активного поиска.
     const monthTxs = transactions.filter(t => t.mk === selectedMonth);
-    const familyModeScope = ['family','all','personal'].includes(txScopeFilter) ? txScopeFilter : 'family';
-    if (!['family','all','personal'].includes(txScopeFilter)) txScopeFilter = 'family';
-    // The scope selector is useful even for a user who has not created a family yet:
-    // `family` means shared/common operations, `personal` means private operations.
+    const effectiveScope = familyIsFamily
+        ? (['family','all','personal'].includes(txScopeFilter) ? txScopeFilter : 'family')
+        : 'all';
+    // Scope is derived from the loaded family status. renderUI() must not mutate
+    // the user's persisted filter while that status is still being loaded.
     // In family mode the server only returns this user's personal operations, so
     // selecting `personal` can never expose another member's private data.
-    const filterScope = (arr) => arr.filter(t => familyModeScope === 'all' || (familyModeScope === 'personal' ? t.scope === 'personal' : t.scope !== 'personal'));
+    const filterScope = (arr) => arr.filter(t => effectiveScope === 'all' || (effectiveScope === 'personal' ? t.scope === 'personal' : t.scope !== 'personal'));
     const filterType = (arr) => txTypeFilter === 'all' ? arr : arr.filter(t => t.type === txTypeFilter);
     const analyticsTxs = filterType(filterScope(monthTxs));
     let income = 0, expense = 0, savings = 0;
@@ -2375,9 +2379,8 @@ function renderUI() {
 
     if (familyIsFamily && txAuthorFilter !== 'all') visibleTxs = visibleTxs.filter(t => String(t.authorId || '') === String(txAuthorFilter));
     renderFamilyAuthorFilter();
-    if (familyIsFamily && !['family','all','personal'].includes(txScopeFilter)) txScopeFilter = 'family';
-    if (!familyIsFamily) txScopeFilter = 'all';
-    const scopeSel = document.getElementById('tx-scope-filter'); if (scopeSel) { scopeSel.value = txScopeFilter; scopeSel.style.display = 'block'; }
+    const scopeSel = document.getElementById('tx-scope-filter');
+    if (scopeSel) { scopeSel.value = effectiveScope; scopeSel.style.display = 'block'; }
     const typeSel = document.getElementById('tx-type-filter'); if (typeSel) typeSel.value = txTypeFilter;
     const sortSel = document.getElementById('tx-sort-filter'); if (sortSel) sortSel.value = txSortOrder;
     renderFamilyOverview();
@@ -2662,7 +2665,7 @@ async function fetchPartners() {
                 desc: String(b.desc || '').slice(0, 200),
                 url: String(b.url)
             }));
-            if (partnerBanks.length) renderUI();
+            if (partnerBanks.length) renderPartnerBanks();
         }
     } catch (e) { /* останутся локальные значения */ }
 }
@@ -2856,7 +2859,10 @@ function renderYearlyChart() {
     const ctx = document.getElementById('yearlyChart').getContext('2d');
     if (yearlyChartInstance) yearlyChartInstance.destroy();
     const selY = selectedMonth.slice(0, 4); // год выбранного в селекторе месяца
-    const yearlySource = familyIsFamily && txScopeFilter === 'personal' ? transactions.filter(t => t.scope === 'personal') : (familyIsFamily && txScopeFilter !== 'all' ? transactions.filter(t => t.scope !== 'personal') : transactions);
+    const yearlyScope = familyIsFamily
+        ? (['family','all','personal'].includes(txScopeFilter) ? txScopeFilter : 'family')
+        : 'all';
+    const yearlySource = familyIsFamily && yearlyScope === 'personal' ? transactions.filter(t => t.scope === 'personal') : (familyIsFamily && yearlyScope !== 'all' ? transactions.filter(t => t.scope !== 'personal') : transactions);
     const incByMonth = allMonths.map((m, i) => yearlySource.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'income').reduce((s, t) => s + (t.amountBase || t.amount), 0));
     const expByMonth = allMonths.map((m, i) => yearlySource.filter(t => t.mk === selY + '-' + String(i + 1).padStart(2, '0') && t.type === 'expense').reduce((s, t) => s + (t.amountBase || t.amount), 0));
     yearlyChartInstance = new Chart(ctx, {
@@ -3103,7 +3109,9 @@ async function cloudSave() {
         }
     }, 1500);
 }
-async function cloudLoad() {
+let cloudLoadPromise = null;
+
+async function _cloudLoad() {
     if (!platform.inTelegram) return;
     const loadStartedAt = Date.now();
     try {
@@ -3155,6 +3163,13 @@ async function cloudLoad() {
     } catch (e) {
         /* сервер недоступен — работаем локально */
     }
+}
+
+function cloudLoad() {
+    if (!platform.inTelegram) return Promise.resolve();
+    if (cloudLoadPromise) return cloudLoadPromise;
+    cloudLoadPromise = _cloudLoad().finally(() => { cloudLoadPromise = null; });
+    return cloudLoadPromise;
 }
 
 function familyLink(token) {
@@ -3838,10 +3853,12 @@ startCloudRefreshLoop();
     // localStorage (например, старые расходы/остаток), а через 1–2 секунды
     // получает другие цифры после cloudLoad().
     const cloudPromise = cloudLoad().catch(e => console.error('cloudLoad failed', e));
-    const ratesPromise = fetchCbRates().catch(() => {});
-    const partnersPromise = fetchPartners().catch(() => {});
+    // Rates and partner offers are secondary UI data. They must not trigger a
+    // full dashboard render or delay the first financial render.
+    fetchCbRates().catch(() => {});
+    fetchPartners().catch(() => {});
     try { await handleInviteParam(); } catch (e) {}
-    await Promise.allSettled([cloudPromise, ratesPromise, partnersPromise]);
+    await cloudPromise;
     // тема
     const savedTheme = localStorage.getItem('sage_theme') || 'system';
     if (savedTheme) {
@@ -3865,6 +3882,7 @@ startCloudRefreshLoop();
     checkReminders();
     applyPrivacy();
     updatePinUI();
+    appReady = true;
     renderUI();
 
     // PIN-экран при входе
