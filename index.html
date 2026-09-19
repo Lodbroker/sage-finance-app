@@ -2250,7 +2250,13 @@ function renderTransactionsList(filteredTxs) {
         item.addEventListener('mousedown', startPress);
         item.addEventListener('mouseup', () => clearTimeout(pressTimer));
         item.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-        item.addEventListener('click', () => { if (longPressFired) { longPressFired = false; return; } if (familyIsFamily && familyRole === 'member') return uiAlert('В семейном режиме изменять и удалять операции может только владелец.'); openEditTx(tx.id); });
+        item.addEventListener('click', () => {
+            if (longPressFired) { longPressFired = false; return; }
+            if (familyIsFamily && familyRole === 'member' && Number(tx.authorId) !== Number(platform.user?.id)) {
+                return uiAlert('В семейном режиме можно изменять и удалять только свои операции.');
+            }
+            openEditTx(tx.id);
+        });
     });
 
     if (!shown.length) {
