@@ -3833,10 +3833,10 @@ startCloudRefreshLoop();
 (async function init() {
     migrateMonthKeys();
     migrateBudgetPlans();
-    // Быстрый старт: локальный кэш рисуется сразу, сеть обновляет его в фоне.
-    renderUI();
-    renderFamilyStatus();
-    applyDailyReminderUI();
+    // Первичный финансовый рендер делаем только после попытки загрузить
+    // актуальное облачное состояние. Иначе пользователь сначала видит старый
+    // localStorage (например, старые расходы/остаток), а через 1–2 секунды
+    // получает другие цифры после cloudLoad().
     const cloudPromise = cloudLoad().catch(e => console.error('cloudLoad failed', e));
     const ratesPromise = fetchCbRates().catch(() => {});
     const partnersPromise = fetchPartners().catch(() => {});
